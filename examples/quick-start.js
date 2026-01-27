@@ -11,7 +11,7 @@
  * 4. Запустите: node examples/quick-start.js
  */
 
-import { ITDClient } from '../src/client.js';
+import { ITDClient } from 'itd-sdk-js';
 import dotenv from 'dotenv';
 
 // Загружаем переменные окружения из .env файла

@@ -1,0 +1,69 @@
+/**
+ * Пример автоматического входа с получением turnstileToken через Puppeteer
+ */
+import { ITDClient } from '../src/client.js';
+import { getTurnstileToken, getTurnstileTokenInteractive } from '../src/turnstile-helper.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+async function autoLogin() {
+    console.log('=== Автоматический вход с Puppeteer ===\n');
+    
+    const client = new ITDClient();
+    const email = process.env.ITD_USERNAME || 'your_email@example.com';
+    const password = process.env.ITD_PASSWORD || 'your_password';
+    
+    console.log('1️⃣ Получаю свежий turnstileToken через браузер...\n');
+    
+    // Пробуем автоматический режим
+    let turnstileToken = await getTurnstileToken();
+    
+    // Если не получилось - пробуем интерактивный
+    if (!turnstileToken) {
+        console.log('\n2️⃣ Автоматический режим не сработал. Пробую интерактивный...\n');
+        turnstileToken = await getTurnstileTokenInteractive();
+    }
+    
+    if (!turnstileToken) {
+        console.log('\n❌ Не удалось получить токен автоматически');
+        console.log('💡 Попробуй получить токен вручную из браузера');
+        return;
+    }
+    
+    console.log(`\n✅ Токен получен: ${turnstileToken.substring(0, 50)}...\n`);
+    console.log('3️⃣ Выполняю вход...\n');
+    
+    if (await client.login(email, password, turnstileToken)) {
+        console.log('✅ Успешный вход!\n');
+        
+        // Проверяем что refresh работает
+        console.log('4️⃣ Проверяю refresh токен...\n');
+        const refreshed = await client.refreshAccessToken();
+        if (refreshed) {
+            console.log('✅ Refresh токен работает! Теперь можно работать без Turnstile\n');
+        } else {
+            console.log('⚠️  Refresh не работает (возможно нужны cookies от браузера)\n');
+        }
+        
+        // Пробуем получить посты
+        console.log('5️⃣ Получаю посты...\n');
+        const posts = await client.getPosts(5, 0);
+        console.log(`Найдено постов: ${posts.length}\n`);
+        
+        if (posts.length > 0) {
+            console.log('Первый пост:', JSON.stringify(posts[0], null, 2).substring(0, 200));
+        }
+        
+    } else {
+        console.log('❌ Ошибка входа');
+    }
+}
+
+(async () => {
+    try {
+        await autoLogin();
+    } catch (error) {
+        console.error('Ошибка:', error);
+    }
+})();

@@ -5,7 +5,7 @@
  * Показывает, как просто работать с данными без сложных запросов.
  */
 
-import { ITDClient } from '../src/client.js';
+import { ITDClient } from 'itd-sdk-js';
 import dotenv from 'dotenv';
 
 dotenv.config();

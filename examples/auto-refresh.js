@@ -5,7 +5,7 @@
  * Вы просто используете API - всё работает "из коробки"!
  */
 
-import { ITDClient } from '../src/client.js';
+import { ITDClient } from 'itd-sdk-js';
 import dotenv from 'dotenv';
 
 dotenv.config();

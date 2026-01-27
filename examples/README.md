@@ -58,8 +58,23 @@ node examples/auto-refresh.js
 
 ## ⚙️ Настройка перед запуском
 
-1. Установите зависимости: `npm install`
-2. Скопируйте `.env.example` в `.env` и заполните `ITD_ACCESS_TOKEN`
-3. Создайте файл `.cookies` и вставьте туда cookies из браузера
+### Установка через npm (рекомендуется)
+
+```bash
+npm install itd-sdk-js
+```
+
+### Установка из исходников
+
+```bash
+git clone https://github.com/FriceKa/ITD-SDK-js.git
+cd ITD-SDK-js
+npm install
+```
+
+### Конфигурация
+
+1. Скопируйте `.env.example` в `.env` и заполните `ITD_ACCESS_TOKEN`
+2. Создайте файл `.cookies` и вставьте туда cookies из браузера
 
 Подробнее см. **[README.md](../README.md)**
