@@ -1,0 +1,41 @@
+{
+  "name": "itd-sdk-js",
+  "version": "0.1.0",
+  "description": "Неофициальный SDK для итд.com - библиотека для работы с API через Node.js",
+  "main": "src/client.js",
+  "type": "module",
+  "exports": {
+    ".": "./src/client.js"
+  },
+  "scripts": {
+    "test": "node examples/example_usage.js",
+    "start": "node examples/example_usage.js"
+  },
+  "keywords": [
+    "api",
+    "client",
+    "sdk",
+    "itd",
+    "blog",
+    "social-media",
+    "unofficial-api"
+  ],
+  "author": "FriceKa",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FriceKa/ITD-SDK-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/FriceKa/ITD-SDK-js/issues"
+  },
+  "homepage": "https://github.com/FriceKa/ITD-SDK-js#readme",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "axios-cookiejar-support": "^6.0.4",
+    "dotenv": "^16.3.1",
+    "form-data": "^4.0.0",
+    "puppeteer": "^21.11.0",
+    "tough-cookie": "^4.1.3"
+  }
+}

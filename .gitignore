@@ -1,0 +1,39 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Environment variables
+.env
+.cookies
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Internal documentation (not for end users)
+ROADMAP.md
+FULL_API_REFERENCE.md
+USAGE.md
+SECURITY_NOTICE.md
+GIT_WORKFLOW.md
+docs/internal/
+examples/internal/
+
+# Tools (internal development tools, not for end users)
+tools/
+
+# User-specific scripts
+update-post.js
