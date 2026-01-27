@@ -2,6 +2,20 @@
 
 Техническое руководство по методам и настройке библиотеки для работы с API сайта `итд.com`.
 
+## Установка
+
+### Через npm
+
+```bash
+npm install itd-sdk-js
+```
+
+### Использование
+
+```javascript
+import { ITDClient } from 'itd-sdk-js';
+```
+
 ## Настройка проекта
 
 ### 1. Переменные окружения (.env)
@@ -25,7 +39,7 @@
 JavaScript
 
 ```
-import { ITDClient } from './src/client.js';
+import { ITDClient } from 'itd-sdk-js';
 import dotenv from 'dotenv';
 
 dotenv.config();

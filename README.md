@@ -10,16 +10,23 @@
 
 ## Установка
 
-Bash
+### Через npm (рекомендуется)
 
+```bash
+npm install itd-sdk-js
 ```
-npm install
 
+### Из исходников
+
+```bash
+git clone https://github.com/FriceKa/ITD-SDK-js.git
+cd ITD-SDK-js
+npm install
 ```
 
 ## Настройка
 
-1. Создайте `.env` на основе `.env.example`.
+1. Создайте `.env` на основе `.env.example` (или используйте переменные окружения).
 2. Вставьте свой `ITD_ACCESS_TOKEN` (его можно вытащить из Network в DevTools).
 3. Для работы авто-обновления сессии создайте файл `.cookies` и вставьте туда строку `Cookie` из любого запроса к сайту в браузере.
 
@@ -32,8 +39,9 @@ npm install
 JavaScript
 
 ```
-import { ITDClient } from './src/client.js';
+import { ITDClient } from 'itd-sdk-js';
 import dotenv from 'dotenv';
+
 dotenv.config();
 
 const client = new ITDClient();
