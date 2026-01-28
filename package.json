@@ -15,6 +15,7 @@
     "examples/basic-usage.js",
     "examples/quick-start.js",
     "examples/user-friendly.js",
+    "examples/token-validation.js",
     "examples/README.md",
     ".env.example",
     ".cookies.example"
