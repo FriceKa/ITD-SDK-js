@@ -1,0 +1,49 @@
+name: Publish packages
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          registry-url: https://registry.npmjs.org
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      # 1) Publish to npmjs (canonical)
+      - name: Publish to npmjs
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish
+
+      # 2) Publish to GitHub Packages (for GitHub "Packages" tab)
+      # GitHub Packages for npm requires scoped package names, so we temporarily rewrite "name".
+      - name: Rewrite name for GitHub Packages
+        run: node -e "const fs=require('fs'); const p='./package.json'; const j=JSON.parse(fs.readFileSync(p,'utf8')); j.name='@friceka/itd-sdk-js'; fs.writeFileSync(p, JSON.stringify(j,null,2)+'\\n');"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          registry-url: https://npm.pkg.github.com
+
+      - name: Publish to GitHub Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm publish --registry=https://npm.pkg.github.com
+

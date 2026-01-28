@@ -1,5 +1,5 @@
 {
-  "name": "@friceka/itd-sdk-js",
+  "name": "itd-sdk-js",
   "version": "1.0.2",
   "description": "Unofficial SDK for итд.com - Node.js library for working with API. Automatic token refresh, session management, and convenient methods for posts, comments, users, and notifications.",
   "main": "src/client.js",
@@ -39,9 +39,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/FriceKa/ITD-SDK-js.git"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
   },
   "bugs": {
     "url": "https://github.com/FriceKa/ITD-SDK-js/issues"
