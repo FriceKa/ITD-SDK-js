@@ -47,7 +47,8 @@ export class PostsManager {
                 }
                 
                 // Затем создаем пост с ID загруженного файла
-                postData.attachments = [uploadedFile.id];
+                // Используем attachmentIds (не attachments!) - это правильное поле из API
+                postData.attachmentIds = [uploadedFile.id];
             }
             
             // Создаем пост (с изображением или без)
@@ -112,7 +113,8 @@ export class PostsManager {
                 }
                 
                 // Затем создаем пост с ID загруженного файла
-                postData.attachments = [uploadedFile.id];
+                // Используем attachmentIds (не attachments!) - это правильное поле из API
+                postData.attachmentIds = [uploadedFile.id];
             }
             
             // Создаем пост на стене

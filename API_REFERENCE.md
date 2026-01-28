@@ -59,7 +59,9 @@ client.auth.isAuthenticated = true;
 
 ### createPost(text, imagePath?)
 
-Создает новый пост. При указании `imagePath` файл предварительно загружается через `/api/files/upload`, после чего ID файла прикрепляется к посту.
+Создает новый пост. При указании `imagePath` файл предварительно загружается через `/api/files/upload`, после чего ID файла прикрепляется к посту через поле `attachmentIds`.
+
+**Важно:** API использует поле `attachmentIds` (массив ID файлов), а не `attachments`. SDK автоматически использует правильное поле.
 
 - **Параметры**: `text` (string), `imagePath` (string, опционально).
 
@@ -67,8 +69,9 @@ client.auth.isAuthenticated = true;
 
 Создает пост **на стене другого пользователя** (wall post).
 
-- Делается через `POST /api/posts` с телом `{ content, wallRecipientId }`.
+- Делается через `POST /api/posts` с телом `{ content, wallRecipientId, attachmentIds? }`.
 - `wallRecipientId` — это **ID пользователя-получателя**, поэтому метод сначала запрашивает профиль через `getUserProfile(username)` и берет `profile.id`.
+- При указании `imagePath` файл загружается и прикрепляется через `attachmentIds`.
 
 - **Параметры**:
   - `username` — username получателя (string)
