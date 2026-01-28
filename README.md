@@ -10,11 +10,22 @@
 
 ## Установка
 
-### Через npm (рекомендуется)
+### Через GitHub Packages (рекомендуется)
 
 ```bash
-npm install itd-sdk-js
+# Создайте .npmrc файл в вашем проекте
+echo "@friceka:registry=https://npm.pkg.github.com" >> .npmrc
+
+# Установите пакет
+npm install @friceka/itd-sdk-js
 ```
+
+**Примечание:** Для установки из GitHub Packages нужна аутентификация. Добавьте в ваш `~/.npmrc` (или в `.npmrc` проекта):
+```
+//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
+```
+
+Создайте Personal Access Token (classic) с scope `read:packages` в [GitHub Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens).
 
 ### Из исходников
 
