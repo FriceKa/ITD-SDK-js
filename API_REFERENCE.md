@@ -174,11 +174,24 @@ const post = await client.createPost('Текст поста', 'image.jpg');
 
 Получает дерево комментариев к посту.
 
-- **Параметры**: `postId`, `limit`, `sort` (`popular`, `new`, `old`).
+- **Параметры**: `postId`, `limit` (по умолчанию 20, в запросе ограничивается 1–100), `sort` — в SDK можно передавать `"popular"`, `"new"`, `"old"`; в API уходит `popular`, `newest`, `oldest` соответственно.
+- **Ответ API:** `{ data: { comments: [], total, hasMore, nextCursor } }`. Комментарии могут содержать вложенные `replies`, у ответов — поле `replyTo`.
 
 ### addComment(postId, text, replyToCommentId?)
 
-Добавляет новый комментарий или ответ на существующий.
+Добавляет новый комментарий или ответ на существующий (POST к посту: `/api/posts/:postId/comments`).
+
+### replyToComment(commentId, content, replyToUserId)
+
+Ответ на комментарий через отдельный эндпоинт **POST** `/api/comments/:commentId/replies`.
+
+- **Параметры**:
+  - `commentId` — ID комментария, на который отвечаем.
+  - `content` — текст ответа.
+  - `replyToUserId` — ID пользователя-автора комментария (обязательно для API).
+- **Возвращает:** объект созданного комментария-ответа или `null` при ошибке.
+
+Пример: `client.replyToComment('80a775df-811a-4b60-b2fd-24651c1e546e', 'кака', '220e565c-45b9-4634-bdba-a6ebe6e8c5d1')`.
 
 ### Управление комментариями
 

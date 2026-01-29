@@ -54,58 +54,107 @@ export class CommentsManager {
             return null;
         }
     }
+
+    /**
+     * Ответ на комментарий (отдельный эндпоинт /api/comments/:id/replies).
+     *
+     * @param {string} commentId - ID комментария, на который отвечаем
+     * @param {string} content - Текст ответа
+     * @param {string} replyToUserId - ID пользователя-автора комментария (обязательно для API)
+     * @returns {Promise<Object|null>} Данные созданного комментария-ответа или null при ошибке
+     */
+    async replyToComment(commentId, content, replyToUserId) {
+        if (!await this.client.auth.checkAuth()) {
+            console.error('Ошибка: необходимо войти в аккаунт');
+            return null;
+        }
+        if (!replyToUserId) {
+            console.error('Ошибка: replyToUserId обязателен для ответа на комментарий');
+            return null;
+        }
+        try {
+            const url = `${this.client.baseUrl}/api/comments/${commentId}/replies`;
+            const response = await this.axios.post(url, {
+                content,
+                replyToUserId,
+            });
+            if (response.status === 200 || response.status === 201) {
+                return response.data;
+            }
+            console.error(`Ошибка ответа на комментарий: ${response.status} - ${JSON.stringify(response.data)}`);
+            return null;
+        } catch (error) {
+            console.error('Исключение при ответе на комментарий:', error.message);
+            if (error.response) {
+                console.error('Response status:', error.response.status);
+                console.error('Response data:', error.response.data);
+            }
+            return null;
+        }
+    }
     
     /**
-     * Получает комментарии к посту
-     * 
+     * Получает комментарии к посту.
+     * API ожидает sort: "newest" | "oldest" | "popular". SDK принимает "new"/"old"/"popular" и маппит в newest/oldest/popular.
+     *
      * @param {string} postId - ID поста
-     * @param {number} limit - Количество комментариев
-     * @param {string} sort - Сортировка: "popular", "new", "old" (по умолчанию "popular")
+     * @param {number} limit - Количество комментариев (по умолчанию 20)
+     * @param {string} sort - Сортировка: "popular", "new", "old" (в API уходит как popular, newest, oldest)
      * @returns {Promise<Object>} { comments: [], total, hasMore, nextCursor } или { comments: [] } при ошибке
-     * 
-     * Примечание: Авторизация не требуется для просмотра комментариев
      */
     async getComments(postId, limit = 20, sort = 'popular') {
-        try {
-            const commentsUrl = `${this.client.baseUrl}/api/posts/${postId}/comments`;
-            const params = {
-                limit: limit,
-                sort: sort,
-            };
-            
-            const response = await this.axios.get(commentsUrl, { params });
-            
-            if (response.status === 200) {
-                const data = response.data;
-                // Структура: { data: { comments: [...], total, hasMore, nextCursor } }
-                if (data.data && data.data.comments) {
-                    return {
-                        comments: data.data.comments,
-                        total: data.data.total || 0,
-                        hasMore: data.data.hasMore || false,
-                        nextCursor: data.data.nextCursor || null
-                    };
-                } else if (data.comments) {
-                    return {
-                        comments: data.comments,
-                        total: data.total || 0,
-                        hasMore: data.hasMore || false,
-                        nextCursor: data.nextCursor || null
-                    };
-                } else if (Array.isArray(data)) {
-                    return {
-                        comments: data,
-                        total: data.length,
-                        hasMore: false,
-                        nextCursor: null
-                    };
-                }
-                return { comments: [], total: 0, hasMore: false, nextCursor: null };
-            } else {
-                console.error(`Ошибка получения комментариев: ${response.status}`);
-                return { comments: [], total: 0, hasMore: false, nextCursor: null };
+        const commentsUrl = `${this.client.baseUrl}/api/posts/${postId}/comments`;
+        const reqLimit = Math.min(Math.max(1, Number(limit) || 20), 100);
+        const sortMap = { new: 'newest', old: 'oldest', popular: 'popular', newest: 'newest', oldest: 'oldest' };
+        const reqSort = sortMap[sort] || 'popular';
+
+        const parseResponse = (response) => {
+            const data = response.data?.data ?? response.data;
+            if (data?.comments) {
+                return {
+                    comments: data.comments,
+                    total: data.total ?? data.comments.length,
+                    hasMore: data.hasMore ?? false,
+                    nextCursor: data.nextCursor ?? null
+                };
             }
+            if (Array.isArray(data)) {
+                return {
+                    comments: data,
+                    total: data.length,
+                    hasMore: false,
+                    nextCursor: null
+                };
+            }
+            return { comments: [], total: 0, hasMore: false, nextCursor: null };
+        };
+
+        try {
+            const response = await this.axios.get(commentsUrl, {
+                params: { limit: reqLimit, sort: reqSort },
+            });
+
+            if (response.status === 200) {
+                return parseResponse(response);
+            }
+            if (response.status === 422) {
+                const fallback = await this.axios.get(commentsUrl, { params: { limit: reqLimit, sort: 'popular' } });
+                if (fallback.status === 200) {
+                    return parseResponse(fallback);
+                }
+                console.warn('⚠️  GET /api/posts/:postId/comments: 422. API ожидает sort: newest | oldest | popular.');
+            }
+            console.error(`Ошибка получения комментариев: ${response.status}`);
+            return { comments: [], total: 0, hasMore: false, nextCursor: null };
         } catch (error) {
+            if (error.response?.status === 422) {
+                try {
+                    const retry = await this.axios.get(commentsUrl, { params: { limit: 20, sort: 'popular' } });
+                    if (retry.status === 200) {
+                        return parseResponse(retry);
+                    }
+                } catch (_) {}
+            }
             console.error('Исключение при получении комментариев:', error.message);
             if (error.response) {
                 console.error('Response status:', error.response.status);

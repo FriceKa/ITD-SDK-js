@@ -481,6 +481,18 @@ export class ITDClient {
     async addComment(postId, text, replyToCommentId = null) {
         return await this.comments.addComment(postId, text, replyToCommentId);
     }
+
+    /**
+     * Ответ на комментарий (POST /api/comments/:id/replies).
+     *
+     * @param {string} commentId - ID комментария, на который отвечаем
+     * @param {string} content - Текст ответа
+     * @param {string} replyToUserId - ID пользователя-автора комментария (обязательно для API)
+     * @returns {Promise<Object|null>} Данные созданного комментария-ответа или null при ошибке
+     */
+    async replyToComment(commentId, content, replyToUserId) {
+        return await this.comments.replyToComment(commentId, content, replyToUserId);
+    }
     
     /**
      * Ставит лайк на комментарий
