@@ -143,7 +143,8 @@ export class NotificationsManager {
     }
 
     /**
-     * Отмечает все уведомления как прочитанные
+     * Отмечает все уведомления как прочитанные.
+     * Экспериментально: endpoint /api/notifications/read-all может отличаться.
      * 
      * @returns {Promise<boolean>} True если успешно
      */

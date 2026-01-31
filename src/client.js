@@ -199,7 +199,7 @@ export class ITDClient {
         this.hashtags = new HashtagsManager(this);
         this.files = new FilesManager(this);
         this.reports = new ReportsManager(this);
-        this.search = new SearchManager(this);
+        this.searchManager = new SearchManager(this);
     }
 
     /**
@@ -383,7 +383,7 @@ export class ITDClient {
      * 
      * @param {string|null} username - Имя пользователя (null = лента/свои посты)
      * @param {number} limit - Количество постов
-     * @param {string} sort - Сортировка: "new", "old", "popular"
+     * @param {string} sort - Сортировка: "newest", "oldest", "popular"
      * @param {string|null} cursor - Курсор для пагинации
      * @param {string|null} tab - Тип ленты: "popular" (популярные), "following" (из подписок), null (обычная лента)
      * @returns {Promise<Object>} { posts: [], pagination: {} }
@@ -843,7 +843,7 @@ export class ITDClient {
      * @returns {Promise<Object|null>} { users: [], hashtags: [] } или null при ошибке
      */
     async search(query, userLimit = 5, hashtagLimit = 5) {
-        return await this.search.search(query, userLimit, hashtagLimit);
+        return await this.searchManager.search(query, userLimit, hashtagLimit);
     }
     
     /**
@@ -854,7 +854,7 @@ export class ITDClient {
      * @returns {Promise<Array|null>} Массив пользователей или null при ошибке
      */
     async searchUsers(query, limit = 5) {
-        return await this.search.searchUsers(query, limit);
+        return await this.searchManager.searchUsers(query, limit);
     }
     
     /**
@@ -865,7 +865,7 @@ export class ITDClient {
      * @returns {Promise<Array|null>} Массив хэштегов или null при ошибке
      */
     async searchHashtags(query, limit = 5) {
-        return await this.search.searchHashtags(query, limit);
+        return await this.searchManager.searchHashtags(query, limit);
     }
     
     // ========== USER-FRIENDLY МЕТОДЫ ==========
@@ -993,16 +993,6 @@ export class ITDClient {
      */
     async getMyClan() {
         return await this.users.getMyClan();
-    }
-    
-    /**
-     * Получает клан пользователя (эмодзи аватара) (удобный метод)
-     * 
-     * @param {string} username - Имя пользователя
-     * @returns {Promise<string|null>} Эмодзи клана или null
-     */
-    async getUserClan(username) {
-        return await this.users.getUserClan(username);
     }
     
     // === Комментарии ===

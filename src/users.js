@@ -306,9 +306,8 @@ export class UsersManager {
             const response = await this.axios.get(topClansUrl);
 
             if (response.status === 200) {
-                const data = response.data;
-                // Структура: { clans: [...] }
-                return data.clans || [];
+                const data = response.data?.data ?? response.data;
+                return data?.clans || [];
             } else {
                 console.error(`Ошибка получения топ кланов: ${response.status}`);
                 return null;
@@ -401,17 +400,6 @@ export class UsersManager {
      */
     async getMyClan() {
         const profile = await this.getMyProfile();
-        return profile ? (profile.avatar || null) : null;
-    }
-    
-    /**
-     * Получает клан пользователя (эмодзи аватара) (удобный метод)
-     * 
-     * @param {string} username - Имя пользователя
-     * @returns {Promise<string|null>} Эмодзи клана или null
-     */
-    async getUserClan(username) {
-        const profile = await this.getUserProfile(username);
         return profile ? (profile.avatar || null) : null;
     }
 }

@@ -130,8 +130,11 @@ export class AuthManager {
             
             if (response.status === 200) {
                 this.client.setAccessToken(null);
-                // Очистка cookies
-                this.axios.defaults.headers.common['Cookie'] = '';
+                try {
+                    this.client.cookieJar.removeAllCookiesSync();
+                } catch (e) {
+                    // MemoryCookieStore поддерживает removeAllCookiesSync
+                }
                 return true;
             }
             return false;

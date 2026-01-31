@@ -30,8 +30,10 @@ FULL_API_REFERENCE.md
 USAGE.md
 SECURITY_NOTICE.md
 GIT_WORKFLOW.md
+SOLUTION_*.md
 docs/internal/
 examples/internal/
+.npmignore
 
 # Tools (internal development tools, not for end users)
 tools/

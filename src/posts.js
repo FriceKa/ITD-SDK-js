@@ -314,7 +314,7 @@ export class PostsManager {
             const response = await this.axios.put(editUrl, postData);
             
             if (response.status === 200) {
-                return response.data;
+                return response.data?.data ?? response.data;
             } else {
                 console.error(`Ошибка редактирования поста: ${response.status} - ${JSON.stringify(response.data)}`);
                 return null;
@@ -424,7 +424,7 @@ export class PostsManager {
             const response = await this.axios.post(repostUrl, repostData);
             
             if (response.status === 200 || response.status === 201) {
-                return response.data;
+                return response.data?.data ?? response.data;
             } else {
                 console.error(`Ошибка репоста: ${response.status}`);
                 if (response.data) {
