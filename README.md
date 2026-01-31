@@ -27,8 +27,8 @@ npm install
 ## Настройка
 
 1. Создайте `.env` в корне проекта на основе `.env.example` (или используйте переменные окружения).
-2. Вставьте свой `ITD_ACCESS_TOKEN` (его можно вытащить из Network в DevTools).
-3. Для работы авто-обновления сессии создайте файл `.cookies` в корне проекта и вставьте туда строку `Cookie` из любого запроса к сайту в браузере.
+2. Токен: добавьте `ITD_ACCESS_TOKEN` в .env или положите `.cookies` с `refresh_token` — клиент сам подхватит токен из .env или получит через refresh.
+3. Для авто-обновления токена создайте файл `.cookies` с Cookie из браузера (обязательно должен быть `refresh_token`).
 
 SDK по умолчанию читает и пишет `.env` и `.cookies` в корне проекта (`process.cwd()`). При обновлении токена изменения сохраняются в ваш проект. При необходимости можно задать `projectRoot` или явные пути в конструкторе — см. [API_REFERENCE.md](API_REFERENCE.md).
 
@@ -45,8 +45,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const client = new ITDClient();
-client.setAccessToken(process.env.ITD_ACCESS_TOKEN);
-client.auth.isAuthenticated = true;
+// Токен подхватывается из .env. Если только .cookies — await client.ensureAuthenticated();
 
 // Получаем профиль и тренды
 const myProfile = await client.getMyProfile();

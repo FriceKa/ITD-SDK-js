@@ -12,8 +12,6 @@ export class AuthManager {
     constructor(client) {
         this.client = client;
         this.axios = client.axios;
-        this.isAuthenticated = false;
-        this.userData = null;
     }
     
     /**
@@ -66,7 +64,6 @@ export class AuthManager {
                 
                 // Обновляем токен в клиенте
                 this.client.setAccessToken(newToken);
-                this.isAuthenticated = true;
                 
                 // Сохраняем токен в .env файл (в корне проекта)
                 await saveAccessToken(newToken, this.client.envPath);
@@ -132,8 +129,6 @@ export class AuthManager {
             const response = await this.axios.post(logoutUrl);
             
             if (response.status === 200) {
-                this.isAuthenticated = false;
-                this.userData = null;
                 this.client.setAccessToken(null);
                 // Очистка cookies
                 this.axios.defaults.headers.common['Cookie'] = '';
@@ -152,9 +147,8 @@ export class AuthManager {
      * @returns {Promise<boolean>} True если авторизован
      */
     async checkAuth() {
-        // Проверяем наличие accessToken - если он есть, считаем что авторизован
-        // Реальная проверка происходит на уровне API (401 ошибка)
-        return !!(this.client.accessToken || this.isAuthenticated);
+        // Авторизован, если есть accessToken (реальная проверка — 401 при истечении)
+        return !!this.client.accessToken;
     }
     
     /**

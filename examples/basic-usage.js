@@ -12,10 +12,8 @@ dotenv.config();
 async function main() {
     console.log('📝 === Базовое использование SDK ===\n');
 
-    // Создаём клиент
+    // Создаём клиент (токен подхватывается из .env автоматически)
     const client = new ITDClient();
-    client.setAccessToken(process.env.ITD_ACCESS_TOKEN);
-    client.auth.isAuthenticated = true;
 
     try {
         // Получаем свой профиль

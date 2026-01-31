@@ -34,9 +34,10 @@ export class ITDClient {
      * @param {string} [options.cookiesPath] - Полный путь к .cookies (переопределяет projectRoot для .cookies)
      * @param {number} [options.requestTimeout] - Таймаут обычных запросов в мс (по умолчанию 60000)
      * @param {number} [options.uploadTimeout] - Таймаут загрузки файлов и создания поста в мс (по умолчанию 120000)
+     * @param {string} [options.accessToken] - JWT токен (если не указан — берётся из .env ITD_ACCESS_TOKEN)
      */
     constructor(baseUrlOrOptions = null, userAgent = null) {
-        let baseUrl, projectRoot, envPath, cookiesPath, requestTimeout, uploadTimeout;
+        let baseUrl, projectRoot, envPath, cookiesPath, requestTimeout, uploadTimeout, accessToken;
 
         if (baseUrlOrOptions && typeof baseUrlOrOptions === 'object' && !(baseUrlOrOptions instanceof URL)) {
             const opts = baseUrlOrOptions;
@@ -47,6 +48,7 @@ export class ITDClient {
             cookiesPath = opts.cookiesPath ?? path.join(projectRoot, '.cookies');
             requestTimeout = opts.requestTimeout ?? 60000;
             uploadTimeout = opts.uploadTimeout ?? 120000;
+            accessToken = opts.accessToken ?? process.env.ITD_ACCESS_TOKEN ?? null;
         } else {
             projectRoot = process.cwd();
             baseUrl = baseUrlOrOptions || process.env.ITD_BASE_URL || 'https://xn--d1ah4a.com';
@@ -54,6 +56,7 @@ export class ITDClient {
             cookiesPath = path.join(projectRoot, '.cookies');
             requestTimeout = 60000;
             uploadTimeout = 120000;
+            accessToken = process.env.ITD_ACCESS_TOKEN ?? null;
         }
 
         // Используем реальный домен (IDN: итд.com = xn--d1ah4a.com)
@@ -71,7 +74,7 @@ export class ITDClient {
         this.uploadTimeout = uploadTimeout;
 
         /** @type {string|null} */
-        this.accessToken = null;
+        this.accessToken = accessToken || null;
 
         // Прокси (важно, если браузер ходит через 127.0.0.1:10808)
         // Можно задать: ITD_PROXY=http://127.0.0.1:10808
@@ -205,6 +208,66 @@ export class ITDClient {
      */
     setAccessToken(token) {
         this.accessToken = token || null;
+    }
+
+    /**
+     * Убедиться, что есть accessToken. Если нет, но есть refresh_token в cookies — вызывает refresh.
+     * Для сценария «только .cookies»: await client.ensureAuthenticated() перед первым запросом.
+     * @returns {Promise<boolean>} true если токен есть или получен, false если нет
+     */
+    async ensureAuthenticated() {
+        if (this.accessToken) return true;
+        if (!this.hasRefreshToken()) return false;
+        const token = await this.refreshAccessToken();
+        return !!token;
+    }
+
+    /**
+     * Кастомный GET запрос (baseURL уже подставлен)
+     * @param {string} path - Путь, например /api/users/me
+     * @param {Object} [config] - Доп. опции axios
+     */
+    get(path, config = {}) {
+        return this.axios.get(path, config);
+    }
+
+    /**
+     * Кастомный POST запрос
+     * @param {string} path - Путь, например /api/posts
+     * @param {Object} [data] - Тело запроса (JSON)
+     * @param {Object} [config] - Доп. опции axios
+     */
+    post(path, data = {}, config = {}) {
+        return this.axios.post(path, data, config);
+    }
+
+    /**
+     * Кастомный PUT запрос
+     * @param {string} path - Путь
+     * @param {Object} [data] - Тело запроса
+     * @param {Object} [config] - Доп. опции axios
+     */
+    put(path, data = {}, config = {}) {
+        return this.axios.put(path, data, config);
+    }
+
+    /**
+     * Кастомный PATCH запрос
+     * @param {string} path - Путь
+     * @param {Object} [data] - Тело запроса
+     * @param {Object} [config] - Доп. опции axios
+     */
+    patch(path, data = {}, config = {}) {
+        return this.axios.patch(path, data, config);
+    }
+
+    /**
+     * Кастомный DELETE запрос
+     * @param {string} path - Путь
+     * @param {Object} [config] - Доп. опции axios
+     */
+    delete(path, config = {}) {
+        return this.axios.delete(path, config);
     }
     
     /**
@@ -894,15 +957,6 @@ export class ITDClient {
     }
     
     // === Пользователи ===
-    
-    /**
-     * Получает свой профиль (удобный метод)
-     * 
-     * @returns {Promise<Object|null>} Данные профиля или null
-     */
-    async getMyProfile() {
-        return await this.users.getMyProfile();
-    }
     
     /**
      * Проверяет, подписан ли текущий пользователь на указанного (удобный метод)

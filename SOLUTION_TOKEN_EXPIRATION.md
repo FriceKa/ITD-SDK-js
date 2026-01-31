@@ -106,8 +106,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const client = new ITDClient();
-client.setAccessToken(process.env.ITD_ACCESS_TOKEN);
-client.auth.isAuthenticated = true;
+// Токен подхватывается из .env автоматически
 
 if (!client.hasRefreshToken()) {
   throw new Error('Нет refresh_token. Обнови .cookies из браузера.');

@@ -12,8 +12,6 @@ dotenv.config();
 
 async function publishMultiplePosts() {
     const client = new ITDClient();
-    client.setAccessToken(process.env.ITD_ACCESS_TOKEN);
-    client.auth.isAuthenticated = true;
     
     console.log('📝 Публикация нескольких постов с проверкой токена\n');
     

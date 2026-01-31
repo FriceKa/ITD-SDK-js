@@ -14,8 +14,6 @@ async function main() {
     console.log('✨ === Удобные методы SDK ===\n');
 
     const client = new ITDClient();
-    client.setAccessToken(process.env.ITD_ACCESS_TOKEN);
-    client.auth.isAuthenticated = true;
 
     try {
         // Пример 1: Проверка подписки - одна строка вместо сложного запроса

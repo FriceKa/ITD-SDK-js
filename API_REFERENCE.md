@@ -2,6 +2,22 @@
 
 Техническое руководство по методам и настройке библиотеки для работы с API сайта `итд.com`.
 
+## Структура SDK
+
+| Файл | Назначение |
+|------|------------|
+| `client.js` | Главный клиент: создание axios, загрузка cookies, хранение токена, менеджеры, хелперы `get/post/put/patch/delete` |
+| `auth.js` | Авторизация: refresh, logout, checkAuth, ensureAuthenticated, validateAndRefreshToken |
+| `token-storage.js` | Сохранение токена в .env и cookies в .cookies (используется auth при refresh) |
+| `posts.js` | Посты: createPost, getPosts, editPost, deletePost и др. |
+| `comments.js` | Комментарии: addComment, replyToComment, getComments, likeComment и др. |
+| `users.js` | Пользователи: getMyProfile, getUserProfile, followUser, getTopClans и др. |
+| `notifications.js` | Уведомления |
+| `hashtags.js` | Хэштеги |
+| `files.js` | Загрузка файлов |
+| `search.js` | Поиск |
+| `reports.js` | Жалобы |
+
 ## Установка
 
 ### Через npm
@@ -38,7 +54,7 @@ import { ITDClient } from 'itd-sdk-js';
 
 ### Инициализация клиента
 
-**Простой вариант (корень проекта = текущая рабочая директория):**
+**Простой вариант:**
 
 ```javascript
 import { ITDClient } from 'itd-sdk-js';
@@ -47,8 +63,14 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const client = new ITDClient();
-client.setAccessToken(process.env.ITD_ACCESS_TOKEN);
-client.auth.isAuthenticated = true;
+// Токен подхватывается из .env автоматически
+```
+
+**Только .cookies (без ITD_ACCESS_TOKEN в .env):**
+
+```javascript
+const client = new ITDClient();
+await client.ensureAuthenticated(); // получит токен через refresh из .cookies
 ```
 
 **С опциями (projectRoot / envPath / cookiesPath):**
@@ -59,13 +81,11 @@ client.auth.isAuthenticated = true;
 const client = new ITDClient({
     baseUrl: 'https://xn--d1ah4a.com',
     userAgent: '...',
-    projectRoot: process.cwd(),              // корень проекта (по умолчанию process.cwd())
-    // envPath: '/path/to/project/.env',
-    // cookiesPath: '/path/to/project/.cookies',
-    requestTimeout: 60000,                    // таймаут обычных запросов, мс (по умолчанию 60 с)
-    uploadTimeout: 120000,                    // таймаут загрузки файлов и создания поста, мс (по умолчанию 120 с)
+    projectRoot: process.cwd(),
+    requestTimeout: 60000,
+    uploadTimeout: 120000,
+    accessToken: '...',                       // опционально; по умолчанию из .env ITD_ACCESS_TOKEN
 });
-client.setAccessToken(process.env.ITD_ACCESS_TOKEN);
 ```
 
 - `projectRoot` — директория, в которой ищутся `.env` и `.cookies` (по умолчанию `process.cwd()`).
@@ -213,8 +233,11 @@ const post = await client.createPost('Текст поста', 'image.jpg');
 ## Методы API: Управление токенами
 
 - `hasRefreshToken()` — проверяет наличие refresh_token в cookies. Возвращает `boolean`.
+- `ensureAuthenticated()` — если нет accessToken, но есть refresh_token — вызывает refresh и получает токен. Возвращает `Promise<boolean>`. Для сценария «только .cookies»: `await client.ensureAuthenticated()` перед первым запросом.
 - `validateAndRefreshToken()` — проверяет валидность токена и обновляет его при необходимости. Возвращает `Promise<boolean>`.
 - `refreshAccessToken()` — принудительно обновляет токен через refresh endpoint. Возвращает `Promise<string|null>`.
+
+**Кастомные запросы:** `client.get(path)`, `client.post(path, data)`, `client.put(path, data)`, `client.patch(path, data)`, `client.delete(path)` — для произвольных эндпоинтов (baseURL уже подставлен).
 
 **Рекомендация:** При множественных запросах с интервалами (более 10-15 минут) вызывайте `validateAndRefreshToken()` перед каждым запросом.
 
