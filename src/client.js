@@ -16,6 +16,7 @@ import { HashtagsManager } from './hashtags.js';
 import { FilesManager } from './files.js';
 import { ReportsManager } from './reports.js';
 import { SearchManager } from './search.js';
+import { VerificationManager } from './verification.js';
 
 dotenv.config();
 
@@ -200,6 +201,7 @@ export class ITDClient {
         this.files = new FilesManager(this);
         this.reports = new ReportsManager(this);
         this.searchManager = new SearchManager(this);
+        this.verification = new VerificationManager(this);
     }
 
     /**
@@ -343,6 +345,17 @@ export class ITDClient {
     async logout() {
         return await this.auth.logout();
     }
+
+    /**
+     * Смена пароля. POST /api/v1/auth/change-password. Требует cookies (refresh_token).
+     *
+     * @param {string} oldPassword - Текущий пароль
+     * @param {string} newPassword - Новый пароль
+     * @returns {Promise<Object|null>} Ответ API или null
+     */
+    async changePassword(oldPassword, newPassword) {
+        return await this.auth.changePassword(oldPassword, newPassword);
+    }
     
     /**
      * Создает пост (удобный метод)
@@ -413,6 +426,19 @@ export class ITDClient {
     async getFeedFollowing(limit = 20, cursor = null) {
         return await this.posts.getFeedFollowing(limit, cursor);
     }
+
+    /**
+     * Получает лайкнутые посты пользователя.
+     * GET /api/posts/user/{username}/liked → { posts: [], pagination: {} }
+     *
+     * @param {string} username - Имя пользователя
+     * @param {number} limit - Количество постов
+     * @param {string|null} cursor - Курсор для пагинации
+     * @returns {Promise<Object>} { posts: [], pagination: {} }
+     */
+    async getLikedPosts(username, limit = 20, cursor = null) {
+        return await this.posts.getLikedPosts(username, limit, cursor);
+    }
     
     /**
      * Получает список постов (простой вариант - только массив)
@@ -435,6 +461,28 @@ export class ITDClient {
     async getPost(postId) {
         return await this.posts.getPost(postId);
     }
+
+    /**
+     * Отмечает пост как просмотренный. POST /api/posts/{id}/view
+     *
+     * @param {string} postId - ID поста
+     * @returns {Promise<boolean>} True если успешно
+     */
+    async viewPost(postId) {
+        return await this.posts.viewPost(postId);
+    }
+
+    /**
+     * Получает посты на стене пользователя. GET /api/posts/user/{username}/wall
+     *
+     * @param {string} username - Имя пользователя
+     * @param {number} limit - Количество
+     * @param {string|null} cursor - Курсор пагинации
+     * @returns {Promise<Object>} { posts: [], pagination: {} }
+     */
+    async getWallByUser(username, limit = 20, cursor = null) {
+        return await this.posts.getWallByUser(username, limit, cursor);
+    }
     
     /**
      * Удаляет пост (удобный метод)
@@ -445,15 +493,35 @@ export class ITDClient {
     async deletePost(postId) {
         return await this.posts.deletePost(postId);
     }
+
+    /**
+     * Восстанавливает удалённый пост. POST /api/posts/{id}/restore
+     *
+     * @param {string} postId - ID поста
+     * @returns {Promise<boolean>} True если успешно
+     */
+    async restorePost(postId) {
+        return await this.posts.restorePost(postId);
+    }
     
     /**
-     * Закрепляет пост (удобный метод)
-     * 
+     * Закрепляет пост. POST /api/posts/{id}/pin → { success: true, pinnedPostId }
+     *
      * @param {string} postId - ID поста
      * @returns {Promise<boolean>} True если успешно
      */
     async pinPost(postId) {
         return await this.posts.pinPost(postId);
+    }
+
+    /**
+     * Открепляет пост. DELETE /api/posts/{id}/pin → { success: true, pinnedPostId: null }
+     *
+     * @param {string} postId - ID поста
+     * @returns {Promise<boolean>} True если успешно
+     */
+    async unpinPost(postId) {
+        return await this.posts.unpinPost(postId);
     }
     
     /**
@@ -537,12 +605,25 @@ export class ITDClient {
      * Добавляет комментарий к посту
      * 
      * @param {string} postId - ID поста
-     * @param {string} text - Текст комментария
+     * @param {string} text - Текст (пустая строка для голосового)
      * @param {string|null} replyToCommentId - ID комментария для ответа (опционально)
+     * @param {string[]|null} attachmentIds - ID загруженных файлов (audio/ogg для голосовых)
      * @returns {Promise<Object|null>} Данные комментария
      */
-    async addComment(postId, text, replyToCommentId = null) {
-        return await this.comments.addComment(postId, text, replyToCommentId);
+    async addComment(postId, text, replyToCommentId = null, attachmentIds = null) {
+        return await this.comments.addComment(postId, text, replyToCommentId, attachmentIds);
+    }
+
+    /**
+     * Добавляет голосовое сообщение в комментарий. Загружает audio/ogg и создаёт комментарий.
+     *
+     * @param {string} postId - ID поста
+     * @param {string} audioPath - Путь к аудиофайлу (audio/ogg)
+     * @param {string|null} replyToCommentId - ID комментария для ответа (опционально)
+     * @returns {Promise<Object|null>} Данные созданного комментария или null
+     */
+    async addVoiceComment(postId, audioPath, replyToCommentId = null) {
+        return await this.comments.addVoiceComment(postId, audioPath, replyToCommentId);
     }
 
     /**
@@ -586,6 +667,16 @@ export class ITDClient {
     async deleteComment(commentId) {
         return await this.comments.deleteComment(commentId);
     }
+
+    /**
+     * Восстанавливает удалённый комментарий. POST /api/comments/{id}/restore
+     *
+     * @param {string} commentId - ID комментария
+     * @returns {Promise<boolean>} True если успешно
+     */
+    async restoreComment(commentId) {
+        return await this.comments.restoreComment(commentId);
+    }
     
     /**
      * Получает комментарии к посту
@@ -600,14 +691,38 @@ export class ITDClient {
     }
     
     /**
-     * Обновляет описание профиля текущего пользователя
-     * 
-     * @param {string} bio - Новое описание профиля
+     * Обновляет профиль текущего пользователя.
+     * PUT /api/users/me → { id, username, displayName, bio, updatedAt }
+     *
+     * @param {string|null} bio - Новое описание профиля (опционально)
      * @param {string|null} displayName - Новое отображаемое имя (опционально)
+     * @param {string|null} username - Новый username (опционально)
+     * @param {string|null} bannerId - ID загруженного баннера (опционально)
      * @returns {Promise<Object|null>} Обновленные данные профиля или null при ошибке
      */
-    async updateProfile(bio, displayName = null) {
-        return await this.users.updateProfile(bio, displayName);
+    async updateProfile(bio = null, displayName = null, username = null, bannerId = null) {
+        return await this.users.updateProfile(bio, displayName, username, bannerId);
+    }
+
+    /**
+     * Получает настройки приватности.
+     * GET /api/users/me/privacy → { isPrivate, wallClosed }
+     *
+     * @returns {Promise<Object|null>} { isPrivate, wallClosed } или null
+     */
+    async getPrivacy() {
+        return await this.users.getPrivacy();
+    }
+
+    /**
+     * Обновляет настройки приватности.
+     * PUT /api/users/me/privacy → { isPrivate, wallClosed }
+     *
+     * @param {Object} options - { isPrivate?: boolean, wallClosed?: boolean }
+     * @returns {Promise<Object|null>} { isPrivate, wallClosed } или null
+     */
+    async updatePrivacy(options = {}) {
+        return await this.users.updatePrivacy(options);
     }
     
     /**
@@ -684,27 +799,39 @@ export class ITDClient {
     }
     
     /**
-     * Получает список уведомлений
-     * 
+     * Получает список уведомлений.
+     * GET /api/notifications/?offset=0&limit=20 → { notifications: [], hasMore }
+     *
      * @param {number} limit - Количество уведомлений
-     * @param {string|null} cursor - Курсор для пагинации
-     * @param {string|null} type - Фильтр по типу: 'reply', 'like', 'wall_post', 'follow', 'comment' (опционально)
-     * @returns {Promise<Object|null>} { notifications: [], pagination: {} } или null
+     * @param {number} offset - Смещение для пагинации
+     * @param {string|null} type - Фильтр по типу: 'reply', 'like', 'wall_post', 'follow', 'comment'
+     * @returns {Promise<Object|null>} { notifications: [], hasMore } или null
      */
-    async getNotifications(limit = 20, cursor = null, type = null) {
-        return await this.notifications.getNotifications(limit, cursor, type);
+    async getNotifications(limit = 20, offset = 0, type = null) {
+        return await this.notifications.getNotifications(limit, offset, type);
     }
-    
+
     /**
      * Получает уведомления определенного типа
-     * 
-     * @param {string} type - Тип уведомления: 'reply', 'like', 'wall_post', 'follow', 'comment'
-     * @param {number} limit - Количество уведомлений (по умолчанию 20)
-     * @param {string|null} cursor - Курсор для пагинации
-     * @returns {Promise<Object|null>} { notifications: [], pagination: {} } или null
+     *
+     * @param {string} type - Тип: 'reply', 'like', 'wall_post', 'follow', 'comment'
+     * @param {number} limit - Количество
+     * @param {number} offset - Смещение
+     * @returns {Promise<Object|null>} { notifications: [], hasMore } или null
      */
-    async getNotificationsByType(type, limit = 20, cursor = null) {
-        return await this.notifications.getNotifications(limit, cursor, type);
+    async getNotificationsByType(type, limit = 20, offset = 0) {
+        return await this.notifications.getNotifications(limit, offset, type);
+    }
+
+    /**
+     * Отмечает несколько уведомлений как прочитанные.
+     * POST /api/notifications/read-batch → { success: true, count }
+     *
+     * @param {string[]} ids - Массив ID уведомлений
+     * @returns {Promise<Object|null>} { success: true, count } или null
+     */
+    async markNotificationsAsReadBatch(ids) {
+        return await this.notifications.markAsReadBatch(ids);
     }
     
     /**
@@ -784,6 +911,26 @@ export class ITDClient {
     async uploadFile(filePath) {
         return await this.files.uploadFile(filePath);
     }
+
+    /**
+     * Получает информацию о файле. GET /api/files/{id}
+     *
+     * @param {string} fileId - ID файла
+     * @returns {Promise<Object|null>} { id, url, filename, mimeType, size } или null
+     */
+    async getFile(fileId) {
+        return await this.files.getFile(fileId);
+    }
+
+    /**
+     * Удаляет файл. DELETE /api/files/{id}
+     *
+     * @param {string} fileId - ID файла
+     * @returns {Promise<boolean>} True если успешно
+     */
+    async deleteFile(fileId) {
+        return await this.files.deleteFile(fileId);
+    }
     
     /**
      * Отправляет репорт на пост, комментарий или пользователя
@@ -832,6 +979,43 @@ export class ITDClient {
      */
     async reportUser(userId, reason = 'other', description = '') {
         return await this.reports.reportUser(userId, reason, description);
+    }
+
+    /**
+     * Получает статус верификации. GET /api/verification/status
+     *
+     * @returns {Promise<Object|null>} Статус верификации или null
+     */
+    async getVerificationStatus() {
+        return await this.verification.getStatus();
+    }
+
+    /**
+     * Подаёт заявку на верификацию. POST /api/verification/submit
+     *
+     * @param {string} videoUrl - URL загруженного видео (из uploadFile)
+     * @returns {Promise<Object|null>} { success, request } или null
+     */
+    async submitVerification(videoUrl) {
+        return await this.verification.submit(videoUrl);
+    }
+
+    /**
+     * Получает статус платформы. GET /api/platform/status
+     *
+     * @returns {Promise<Object|null>} Статус платформы или null
+     */
+    async getPlatformStatus() {
+        try {
+            const response = await this.axios.get('/api/platform/status');
+            if (response.status === 200) {
+                return response.data?.data ?? response.data;
+            }
+            return null;
+        } catch (error) {
+            console.error('Ошибка получения статуса платформы:', error.message);
+            return null;
+        }
     }
     
     /**
@@ -1030,12 +1214,12 @@ export class ITDClient {
     
     /**
      * Получает только непрочитанные уведомления (удобный метод)
-     * 
-     * @param {number} limit - Количество уведомлений
-     * @param {string|null} cursor - Курсор для пагинации
-     * @returns {Promise<Object|null>} { notifications: [], pagination: {} } или null
+     *
+     * @param {number} limit - Количество
+     * @param {number} offset - Смещение
+     * @returns {Promise<Object|null>} { notifications: [], hasMore } или null
      */
-    async getUnreadNotifications(limit = 20, cursor = null) {
-        return await this.notifications.getUnreadNotifications(limit, cursor);
+    async getUnreadNotifications(limit = 20, offset = 0) {
+        return await this.notifications.getUnreadNotifications(limit, offset);
     }
 }

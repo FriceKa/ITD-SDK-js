@@ -8,11 +8,12 @@ export class ReportsManager {
     }
 
     /**
-     * Отправляет репорт на пост, комментарий или пользователя
-     * 
+     * Отправляет репорт на пост, комментарий или пользователя.
+     * POST /api/reports → { data: { id, createdAt } }
+     *
      * @param {string} targetType - Тип цели: "post", "comment", "user"
      * @param {string} targetId - ID цели (поста, комментария или пользователя)
-     * @param {string} reason - Причина репорта (например, "other", "spam", "harassment", "inappropriate")
+     * @param {string} reason - Причина: "spam", "violence", "hate", "adult", "fraud", "other"
      * @param {string} description - Описание проблемы (опционально)
      * @returns {Promise<Object|null>} { id, createdAt } или null при ошибке
      */
@@ -61,9 +62,9 @@ export class ReportsManager {
 
     /**
      * Отправляет репорт на пост
-     * 
+     *
      * @param {string} postId - ID поста
-     * @param {string} reason - Причина репорта (по умолчанию "other")
+     * @param {string} reason - Причина: "spam", "violence", "hate", "adult", "fraud", "other" (по умолчанию "other")
      * @param {string} description - Описание проблемы
      * @returns {Promise<Object|null>} { id, createdAt } или null при ошибке
      */
@@ -75,7 +76,7 @@ export class ReportsManager {
      * Отправляет репорт на комментарий
      * 
      * @param {string} commentId - ID комментария
-     * @param {string} reason - Причина репорта (по умолчанию "other")
+     * @param {string} reason - Причина: "spam", "violence", "hate", "adult", "fraud", "other"
      * @param {string} description - Описание проблемы
      * @returns {Promise<Object|null>} { id, createdAt } или null при ошибке
      */
@@ -87,7 +88,7 @@ export class ReportsManager {
      * Отправляет репорт на пользователя
      * 
      * @param {string} userId - ID пользователя
-     * @param {string} reason - Причина репорта (по умолчанию "other")
+     * @param {string} reason - Причина: "spam", "violence", "hate", "adult", "fraud", "other"
      * @param {string} description - Описание проблемы
      * @returns {Promise<Object|null>} { id, createdAt } или null при ошибке
      */

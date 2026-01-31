@@ -231,6 +231,38 @@ export class PostsManager {
     }
     
     /**
+     * Получает лайкнутые посты пользователя.
+     * GET /api/posts/user/{username}/liked → { data: { posts: [], pagination: {} } }
+     *
+     * @param {string} username - Имя пользователя
+     * @param {number} limit - Количество постов (по умолчанию 20)
+     * @param {string|null} cursor - Курсор для пагинации (pagination.nextCursor)
+     * @returns {Promise<Object>} { posts: [], pagination: { limit, nextCursor, hasMore } }
+     */
+    async getLikedPosts(username, limit = 20, cursor = null) {
+        try {
+            const url = `${this.client.baseUrl}/api/posts/user/${encodeURIComponent(username)}/liked`;
+            const params = { limit };
+            if (cursor) params.cursor = cursor;
+
+            const response = await this.axios.get(url, { params });
+
+            if (response.status === 200) {
+                const data = response.data;
+                const inner = data?.data ?? data;
+                return {
+                    posts: inner?.posts || [],
+                    pagination: inner?.pagination || {}
+                };
+            }
+            return { posts: [], pagination: {} };
+        } catch (error) {
+            console.error('Ошибка получения лайкнутых постов:', error.message);
+            return { posts: [], pagination: {} };
+        }
+    }
+
+    /**
      * Получает популярные посты (лента популярного)
      * 
      * @param {number} limit - Количество постов
@@ -257,6 +289,52 @@ export class PostsManager {
     }
     
     
+    /**
+     * Отмечает пост как просмотренный. POST /api/posts/{id}/view
+     *
+     * @param {string} postId - ID поста
+     * @returns {Promise<boolean>} True если успешно
+     */
+    async viewPost(postId) {
+        if (!await this.client.auth.checkAuth()) return false;
+        try {
+            const url = `${this.client.baseUrl}/api/posts/${postId}/view`;
+            const response = await this.axios.post(url);
+            return response.status === 200 || response.status === 201 || response.status === 204;
+        } catch (error) {
+            console.error('Исключение при отметке просмотра:', error.message);
+            return false;
+        }
+    }
+
+    /**
+     * Получает посты на стене пользователя. GET /api/posts/user/{username}/wall
+     *
+     * @param {string} username - Имя пользователя
+     * @param {number} limit - Количество
+     * @param {string|null} cursor - Курсор пагинации
+     * @returns {Promise<Object>} { posts: [], pagination: {} }
+     */
+    async getWallByUser(username, limit = 20, cursor = null) {
+        try {
+            const url = `${this.client.baseUrl}/api/posts/user/${encodeURIComponent(username)}/wall`;
+            const params = { limit };
+            if (cursor) params.cursor = cursor;
+            const response = await this.axios.get(url, { params });
+            if (response.status === 200) {
+                const data = response.data?.data ?? response.data;
+                return {
+                    posts: data?.posts || [],
+                    pagination: data?.pagination || {}
+                };
+            }
+            return { posts: [], pagination: {} };
+        } catch (error) {
+            console.error('Ошибка получения постов со стены:', error.message);
+            return { posts: [], pagination: {} };
+        }
+    }
+
     /**
      * Получает конкретный пост по ID
      * 
@@ -348,26 +426,40 @@ export class PostsManager {
             
             if (response.status === 200 || response.status === 204) {
                 return true;
-            } else {
-                console.error(`Ошибка удаления поста: ${response.status}`);
-                if (response.data) {
-                    console.error('Response data:', response.data);
-                }
-                return false;
             }
+            return false;
         } catch (error) {
             console.error('Исключение при удалении поста:', error.message);
-            if (error.response) {
-                console.error('Response status:', error.response.status);
-                console.error('Response data:', error.response.data);
-            }
+            return false;
+        }
+    }
+
+    /**
+     * Восстанавливает удалённый пост.
+     * POST /api/posts/{id}/restore — пустой ответ при успехе
+     *
+     * @param {string} postId - ID поста
+     * @returns {Promise<boolean>} True если успешно
+     */
+    async restorePost(postId) {
+        if (!await this.client.auth.checkAuth()) {
+            console.error('Ошибка: необходимо войти в аккаунт');
+            return false;
+        }
+        try {
+            const url = `${this.client.baseUrl}/api/posts/${postId}/restore`;
+            const response = await this.axios.post(url);
+            return response.status === 200 || response.status === 201 || response.status === 204;
+        } catch (error) {
+            console.error('Исключение при восстановлении поста:', error.message);
             return false;
         }
     }
     
     /**
-     * Закрепляет пост
-     * 
+     * Закрепляет пост.
+     * POST /api/posts/{id}/pin → { success: true, pinnedPostId }
+     *
      * @param {string} postId - ID поста
      * @returns {Promise<boolean>} True если успешно
      */
@@ -376,26 +468,40 @@ export class PostsManager {
             console.error('Ошибка: необходимо войти в аккаунт');
             return false;
         }
-        
         try {
             const pinUrl = `${this.client.baseUrl}/api/posts/${postId}/pin`;
             const response = await this.axios.post(pinUrl);
-            
             if (response.status === 200 || response.status === 201) {
-                return true;
-            } else {
-                console.error(`Ошибка закрепления поста: ${response.status}`);
-                if (response.data) {
-                    console.error('Response data:', response.data);
-                }
-                return false;
+                return response.data?.success !== false;
             }
+            return false;
         } catch (error) {
             console.error('Исключение при закреплении поста:', error.message);
-            if (error.response) {
-                console.error('Response status:', error.response.status);
-                console.error('Response data:', error.response.data);
+            return false;
+        }
+    }
+
+    /**
+     * Открепляет пост.
+     * DELETE /api/posts/{id}/pin → { success: true, pinnedPostId: null }
+     *
+     * @param {string} postId - ID поста
+     * @returns {Promise<boolean>} True если успешно
+     */
+    async unpinPost(postId) {
+        if (!await this.client.auth.checkAuth()) {
+            console.error('Ошибка: необходимо войти в аккаунт');
+            return false;
+        }
+        try {
+            const pinUrl = `${this.client.baseUrl}/api/posts/${postId}/pin`;
+            const response = await this.axios.delete(pinUrl);
+            if (response.status === 200 || response.status === 204) {
+                return response.data?.success !== false;
             }
+            return false;
+        } catch (error) {
+            console.error('Исключение при откреплении поста:', error.message);
             return false;
         }
     }

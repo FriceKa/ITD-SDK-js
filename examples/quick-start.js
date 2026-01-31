@@ -220,11 +220,8 @@ async function quickStart() {
     // ============================================
     console.log('🔔 Шаг 10: Получаю уведомления...\n');
     
-    // Получаем список уведомлений
-    // Параметры:
-    // - limit: количество уведомлений (по умолчанию 20)
-    // - cursor: курсор для пагинации (опционально)
-    const notificationsResult = await client.getNotifications(5);
+    // Получаем список уведомлений (limit, offset)
+    const notificationsResult = await client.getNotifications(5, 0);
     
     if (notificationsResult && notificationsResult.notifications.length > 0) {
         console.log(`✅ Найдено уведомлений: ${notificationsResult.notifications.length}\n`);

@@ -119,16 +119,53 @@ export class AuthManager {
     }
     
     /**
-     * Выход из аккаунта
-     * 
+     * Смена пароля. POST /api/v1/auth/change-password
+     * Требует cookies (refresh_token).
+     *
+     * @param {string} oldPassword - Текущий пароль
+     * @param {string} newPassword - Новый пароль
+     * @returns {Promise<Object|null>} Ответ API или null при ошибке
+     */
+    async changePassword(oldPassword, newPassword) {
+        if (!await this.client.auth.checkAuth()) {
+            console.error('Ошибка: необходим accessToken');
+            return null;
+        }
+        if (!this.hasRefreshToken()) {
+            console.error('Ошибка: необходим refresh_token в cookies');
+            return null;
+        }
+        try {
+            const url = `${this.client.baseUrl}/api/v1/auth/change-password`;
+            const response = await this.axios.post(url, {
+                oldPassword,
+                newPassword,
+            });
+            if (response.status === 200) {
+                return response.data;
+            }
+            return null;
+        } catch (error) {
+            console.error('Ошибка смены пароля:', error.message);
+            if (error.response) {
+                console.error('Response:', error.response.status, error.response.data);
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Выход из аккаунта.
+     * POST /api/v1/auth/logout → 204
+     *
      * @returns {Promise<boolean>} True если успешно
      */
     async logout() {
         try {
-            const logoutUrl = `${this.client.baseUrl}/api/v1/auth/sign-out`;
+            const logoutUrl = `${this.client.baseUrl}/api/v1/auth/logout`;
             const response = await this.axios.post(logoutUrl);
-            
-            if (response.status === 200) {
+
+            if (response.status === 200 || response.status === 204) {
                 this.client.setAccessToken(null);
                 try {
                     this.client.cookieJar.removeAllCookiesSync();

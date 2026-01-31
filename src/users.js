@@ -8,13 +8,16 @@ export class UsersManager {
     }
 
     /**
-     * Обновляет описание профиля текущего пользователя
-     * 
-     * @param {string} bio - Новое описание профиля
+     * Обновляет профиль текущего пользователя.
+     * PUT /api/users/me → { id, username, displayName, bio, updatedAt }
+     *
+     * @param {string|null} bio - Новое описание профиля (опционально)
      * @param {string|null} displayName - Новое отображаемое имя (опционально)
+     * @param {string|null} username - Новый username (опционально)
+     * @param {string|null} bannerId - ID загруженного баннера (опционально)
      * @returns {Promise<Object|null>} Обновленные данные профиля или null при ошибке
      */
-    async updateProfile(bio, displayName = null) {
+    async updateProfile(bio = null, displayName = null, username = null, bannerId = null) {
         if (!await this.client.auth.checkAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
@@ -22,19 +25,19 @@ export class UsersManager {
 
         try {
             const updateUrl = `${this.client.baseUrl}/api/users/me`;
-            
             const updateData = {};
-            if (bio !== null && bio !== undefined) {
-                updateData.bio = bio;
-            }
-            if (displayName !== null && displayName !== undefined) {
-                updateData.displayName = displayName;
+            if (bio != null) updateData.bio = bio;
+            if (displayName != null) updateData.displayName = displayName;
+            if (username != null) updateData.username = username;
+            if (bannerId != null) updateData.bannerId = bannerId;
+            if (Object.keys(updateData).length === 0) {
+                return await this.getMyProfile();
             }
 
             const response = await this.axios.put(updateUrl, updateData);
 
             if (response.status === 200) {
-                return response.data;
+                return response.data?.data ?? response.data;
             } else {
                 console.error(`Ошибка обновления профиля: ${response.status}`);
                 if (response.data) {
@@ -82,6 +85,60 @@ export class UsersManager {
                 console.error('Response status:', error.response.status);
                 console.error('Response data:', error.response.data);
             }
+            return null;
+        }
+    }
+
+    /**
+     * Получает настройки приватности текущего пользователя.
+     * GET /api/users/me/privacy → { isPrivate, wallClosed }
+     *
+     * @returns {Promise<Object|null>} { isPrivate, wallClosed } или null при ошибке
+     */
+    async getPrivacy() {
+        if (!await this.client.auth.checkAuth()) {
+            console.error('Ошибка: необходимо войти в аккаунт');
+            return null;
+        }
+        try {
+            const url = `${this.client.baseUrl}/api/users/me/privacy`;
+            const response = await this.axios.get(url);
+            if (response.status === 200) {
+                return response.data?.data ?? response.data;
+            }
+            return null;
+        } catch (error) {
+            console.error('Ошибка получения приватности:', error.message);
+            return null;
+        }
+    }
+
+    /**
+     * Обновляет настройки приватности.
+     * PUT /api/users/me/privacy → { isPrivate, wallClosed }
+     *
+     * @param {Object} options - { isPrivate?: boolean, wallClosed?: boolean }
+     * @returns {Promise<Object|null>} { isPrivate, wallClosed } или null при ошибке
+     */
+    async updatePrivacy(options = {}) {
+        if (!await this.client.auth.checkAuth()) {
+            console.error('Ошибка: необходимо войти в аккаунт');
+            return null;
+        }
+        try {
+            const url = `${this.client.baseUrl}/api/users/me/privacy`;
+            const payload = {};
+            if (options.isPrivate != null) payload.isPrivate = options.isPrivate;
+            if (options.wallClosed != null) payload.wallClosed = options.wallClosed;
+            if (Object.keys(payload).length === 0) return await this.getPrivacy();
+
+            const response = await this.axios.put(url, payload);
+            if (response.status === 200) {
+                return response.data?.data ?? response.data;
+            }
+            return null;
+        } catch (error) {
+            console.error('Ошибка обновления приватности:', error.message);
             return null;
         }
     }

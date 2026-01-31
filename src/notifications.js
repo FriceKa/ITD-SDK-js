@@ -8,14 +8,15 @@ export class NotificationsManager {
     }
 
     /**
-     * Получает список уведомлений
-     * 
+     * Получает список уведомлений.
+     * GET /api/notifications/?offset=0&limit=20 → { notifications: [], hasMore }
+     *
      * @param {number} limit - Количество уведомлений
-     * @param {string|null} cursor - Курсор для пагинации
-     * @param {string|null} type - Фильтр по типу: 'reply', 'like', 'wall_post', 'follow', 'comment' (опционально)
-     * @returns {Promise<Object|null>} { notifications: [], pagination: {} } или null при ошибке
+     * @param {number} offset - Смещение для пагинации
+     * @param {string|null} type - Фильтр по типу: 'reply', 'like', 'wall_post', 'follow', 'comment' (на клиенте)
+     * @returns {Promise<Object|null>} { notifications: [], hasMore } или null при ошибке
      */
-    async getNotifications(limit = 20, cursor = null, type = null) {
+    async getNotifications(limit = 20, offset = 0, type = null) {
         if (!await this.client.auth.checkAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
@@ -23,42 +24,20 @@ export class NotificationsManager {
 
         try {
             const notificationsUrl = `${this.client.baseUrl}/api/notifications`;
-            const params = { limit };
-            if (cursor) {
-                params.cursor = cursor;
-            }
-            // Пробуем передать type в параметрах (если API поддерживает)
-            if (type) {
-                params.type = type;
-            }
+            const params = { limit, offset };
 
             const response = await this.axios.get(notificationsUrl, { params });
 
             if (response.status === 200) {
                 const data = response.data;
-                let notifications = [];
-                let pagination = {};
-                
-                // Предполагаемая структура: { data: { notifications: [...], pagination: {...} } }
-                if (data.data && data.data.notifications) {
-                    notifications = data.data.notifications;
-                    pagination = data.data.pagination || {};
-                } else if (Array.isArray(data)) {
-                    notifications = data;
-                } else if (data.notifications) {
-                    notifications = data.notifications;
-                    pagination = data.pagination || {};
-                }
-                
-                // Фильтруем по типу на клиенте (если API не поддерживает фильтрацию)
+                let notifications = Array.isArray(data?.notifications) ? data.notifications : [];
+                const hasMore = Boolean(data?.hasMore);
+
                 if (type && notifications.length > 0) {
                     notifications = notifications.filter(notif => notif.type === type);
                 }
-                
-                return {
-                    notifications: notifications,
-                    pagination: pagination
-                };
+
+                return { notifications, hasMore };
             } else {
                 console.error(`Ошибка получения уведомлений: ${response.status}`);
                 return null;
@@ -69,6 +48,34 @@ export class NotificationsManager {
                 console.error('Response status:', error.response.status);
                 console.error('Response data:', error.response.data);
             }
+            return null;
+        }
+    }
+
+    /**
+     * Отмечает несколько уведомлений как прочитанные.
+     * POST /api/notifications/read-batch → { success: true, count: number }
+     *
+     * @param {string[]} ids - Массив ID уведомлений
+     * @returns {Promise<Object|null>} { success: true, count } или null при ошибке
+     */
+    async markAsReadBatch(ids) {
+        if (!await this.client.auth.checkAuth()) {
+            console.error('Ошибка: необходимо войти в аккаунт');
+            return null;
+        }
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return { success: true, count: 0 };
+        }
+        try {
+            const url = `${this.client.baseUrl}/api/notifications/read-batch`;
+            const response = await this.axios.post(url, { ids });
+            if (response.status === 200) {
+                return response.data;
+            }
+            return null;
+        } catch (error) {
+            console.error('Исключение при отметке уведомлений:', error.message);
             return null;
         }
     }
@@ -144,8 +151,8 @@ export class NotificationsManager {
 
     /**
      * Отмечает все уведомления как прочитанные.
-     * Экспериментально: endpoint /api/notifications/read-all может отличаться.
-     * 
+     * POST /api/notifications/read-all → { success: true }
+     *
      * @returns {Promise<boolean>} True если успешно
      */
     async markAllAsRead() {
@@ -155,12 +162,11 @@ export class NotificationsManager {
         }
 
         try {
-            // Нужно найти реальный endpoint, пока используем предположительный
             const readAllUrl = `${this.client.baseUrl}/api/notifications/read-all`;
             const response = await this.axios.post(readAllUrl);
 
             if (response.status === 200 || response.status === 204) {
-                return true;
+                return response.data?.success !== false;
             } else {
                 console.error(`Ошибка отметки всех уведомлений: ${response.status}`);
                 if (response.data) {
@@ -173,10 +179,6 @@ export class NotificationsManager {
             if (error.response) {
                 console.error('Response status:', error.response.status);
                 console.error('Response data:', error.response.data);
-                // Если 404 - значит endpoint неправильный, нужно найти реальный
-                if (error.response.status === 404) {
-                    console.error('💡 Endpoint не найден. Найди реальный URL в DevTools');
-                }
             }
             return false;
         }
@@ -196,21 +198,16 @@ export class NotificationsManager {
     
     /**
      * Получает только непрочитанные уведомления (удобный метод)
-     * 
+     *
      * @param {number} limit - Количество уведомлений
-     * @param {string|null} cursor - Курсор для пагинации
-     * @returns {Promise<Object|null>} { notifications: [], pagination: {} } или null
+     * @param {number} offset - Смещение для пагинации
+     * @returns {Promise<Object|null>} { notifications: [], hasMore } или null
      */
-    async getUnreadNotifications(limit = 20, cursor = null) {
-        const all = await this.getNotifications(limit, cursor);
+    async getUnreadNotifications(limit = 20, offset = 0) {
+        const all = await this.getNotifications(limit, offset);
         if (!all) return null;
-        
-        // Фильтруем только непрочитанные
         const unread = all.notifications.filter(n => !n.read);
-        return {
-            notifications: unread,
-            pagination: all.pagination
-        };
+        return { notifications: unread, hasMore: all.hasMore };
     }
 
 }

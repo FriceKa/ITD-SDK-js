@@ -13,30 +13,28 @@ export class CommentsManager {
     }
     
     /**
-     * Добавляет комментарий к посту
-     * 
+     * Добавляет комментарий к посту.
+     * POST /api/posts/{postId}/comments → { id, content, author, attachments, ... }
+     * Поддерживает текст, голосовые (attachmentIds с audio/ogg) и ответы (replyTo).
+     *
      * @param {string} postId - ID поста
-     * @param {string} text - Текст комментария
+     * @param {string} text - Текст комментария (пустая строка для голосового)
      * @param {string|null} replyToCommentId - ID комментария для ответа (опционально)
+     * @param {string[]|null} attachmentIds - ID загруженных файлов (audio/ogg для голосовых)
      * @returns {Promise<Object|null>} Данные созданного комментария или null
      */
-    async addComment(postId, text, replyToCommentId = null) {
+    async addComment(postId, text, replyToCommentId = null, attachmentIds = null) {
         if (!await this.client.auth.checkAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
-        
         try {
             const commentUrl = `${this.client.baseUrl}/api/posts/${postId}/comments`;
-            const commentData = {
-                content: text,  // Реальное поле - content
-            };
-            
-            // Если это ответ на комментарий
-            if (replyToCommentId) {
-                commentData.replyTo = replyToCommentId;
+            const commentData = { content: text ?? '' };
+            if (replyToCommentId) commentData.replyTo = replyToCommentId;
+            if (Array.isArray(attachmentIds) && attachmentIds.length > 0) {
+                commentData.attachmentIds = attachmentIds;
             }
-            
             const response = await this.axios.post(commentUrl, commentData);
             
             if (response.status === 200 || response.status === 201) {
@@ -53,6 +51,25 @@ export class CommentsManager {
             }
             return null;
         }
+    }
+
+    /**
+     * Добавляет голосовое сообщение в комментарий.
+     * Загружает audio/ogg через /api/files/upload и создаёт комментарий с attachmentIds.
+     *
+     * @param {string} postId - ID поста
+     * @param {string} audioPath - Путь к аудиофайлу (audio/ogg)
+     * @param {string|null} replyToCommentId - ID комментария для ответа (опционально)
+     * @returns {Promise<Object|null>} Данные созданного комментария или null
+     */
+    async addVoiceComment(postId, audioPath, replyToCommentId = null) {
+        if (!await this.client.auth.checkAuth()) {
+            console.error('Ошибка: необходимо войти в аккаунт');
+            return null;
+        }
+        const uploaded = await this.client.files.uploadFile(audioPath);
+        if (!uploaded) return null;
+        return await this.addComment(postId, '', replyToCommentId, [uploaded.id]);
     }
 
     /**
@@ -254,6 +271,24 @@ export class CommentsManager {
             }
         } catch (error) {
             console.error('Исключение при удалении комментария:', error.message);
+            return false;
+        }
+    }
+
+    /**
+     * Восстанавливает удалённый комментарий. POST /api/comments/{id}/restore
+     *
+     * @param {string} commentId - ID комментария
+     * @returns {Promise<boolean>} True если успешно
+     */
+    async restoreComment(commentId) {
+        if (!await this.client.auth.checkAuth()) return false;
+        try {
+            const url = `${this.client.baseUrl}/api/comments/${commentId}/restore`;
+            const response = await this.axios.post(url);
+            return response.status === 200 || response.status === 201 || response.status === 204;
+        } catch (error) {
+            console.error('Исключение при восстановлении комментария:', error.message);
             return false;
         }
     }

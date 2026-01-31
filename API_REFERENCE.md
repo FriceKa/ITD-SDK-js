@@ -2,6 +2,69 @@
 
 Техническое руководство по методам и настройке библиотеки для работы с API сайта `итд.com`.
 
+## Подтверждённые эндпоинты
+
+| Метод | Эндпоинт | Описание |
+|-------|----------|----------|
+| GET | `/api/users/{username}` | Профиль → `{ id, username, displayName, avatar, banner, bio, verified, pinnedPostId, wallClosed, followersCount, followingCount, postsCount, isFollowing, isFollowedBy, createdAt }` |
+| GET | `/api/users/{username}/followers?page=1&limit=30` | Подписчики → `{ data: { users: [], pagination: { page, limit, total, hasMore } } }` |
+| GET | `/api/users/{username}/following?page=1&limit=30` | Подписки → `{ data: { users: [], pagination } }` |
+| GET | `/api/posts/user/{username}?limit=20&sort=new` | Посты пользователя → `{ data: { posts: [], pagination: { limit, nextCursor, hasMore } } }` |
+| GET | `/api/posts/user/{username}/liked?limit=20` | Лайкнутые посты → `{ data: { posts: [], pagination } }` |
+| GET | `/api/hashtags/{name}/posts?limit=20` | Посты по хэштегу → `{ data: { hashtag: {}, posts: [], pagination } }` |
+| GET | `/api/hashtags/trending?limit=10` | Трендовые хэштеги → `{ data: { hashtags: [{ id, name, postsCount }] } }` |
+| GET | `/api/users/suggestions/who-to-follow` | Рекомендации → `{ users: [] }` |
+| GET | `/api/users/stats/top-clans` | Топ кланов → `{ clans: [{ avatar, memberCount }] }` |
+| POST | `/api/posts` | Создать пост. `{ content, wallRecipientId?, attachmentIds? }` → `{ id, content, author, ... }` |
+| PUT | `/api/posts/{id}` | Редактировать пост. `{ content }` → `{ id, content, updatedAt }` |
+| DELETE | `/api/posts/{id}` | Удалить пост (пустой ответ) |
+| POST | `/api/posts/{id}/restore` | Восстановить пост (пустой ответ) |
+| POST | `/api/posts/{id}/repost` | Репост. `{ content? }` (комментарий опционально). **attachmentIds игнорируется** — вложения в репост не поддерживаются. |
+| POST | `/api/posts/{id}/like` | Лайк → `{ liked: true, likesCount }` |
+| DELETE | `/api/posts/{id}/like` | Снять лайк → `{ liked: false, likesCount }` |
+| POST | `/api/posts/{id}/pin` | Закрепить пост → `{ success: true, pinnedPostId }` |
+| DELETE | `/api/posts/{id}/pin` | Открепить пост → `{ success: true, pinnedPostId: null }` |
+| POST | `/api/posts/{id}/view` | Отметить пост как просмотренный |
+| GET | `/api/posts/user/{username}/wall` | Посты на стене пользователя → `{ data: { posts: [], pagination } }` |
+| POST | `/api/comments/{id}/restore` | Восстановить удалённый комментарий |
+| POST | `/api/v1/auth/change-password` | Смена пароля. `{ oldPassword, newPassword }`. Требует cookies. |
+| GET | `/api/files/{id}` | Информация о файле |
+| DELETE | `/api/files/{id}` | Удалить файл |
+| GET | `/api/verification/status` | Статус верификации |
+| POST | `/api/verification/submit` | Подать заявку на верификацию. `{ videoUrl }` |
+| GET | `/api/platform/status` | Статус платформы |
+| POST | `/api/files/upload` | Загрузка файла (изображения, audio/ogg). → 201, `{ id, url, filename, mimeType, size }` |
+| PUT | `/api/users/me` | Обновить профиль (bio, displayName, username, bannerId) |
+| POST | `/api/reports` | Рекорт. `{ targetType, targetId, reason, description? }` → `{ data: { id, createdAt } }`. reason: `spam`, `violence`, `hate`, `adult`, `fraud`, `other` |
+| GET | `/api/notifications/?offset=0&limit=20` | Список уведомлений → `{ notifications: [], hasMore }` |
+| POST | `/api/notifications/read-batch` | Отметить несколько прочитанными → `{ success: true, count }` |
+| POST | `/api/notifications/read-all` | Отметить все прочитанными → `{ success: true }` |
+| GET | `/api/users/me/privacy` | Настройки приватности → `{ isPrivate, wallClosed }` |
+| PUT | `/api/users/me/privacy` | Обновить приватность |
+| POST | `/api/v1/auth/refresh` | Обновить токен → `{ accessToken }` |
+| POST | `/api/v1/auth/logout` | Выход → 204 |
+| GET | `/api/posts/{id}` | Один пост |
+| GET | `/api/posts/{postId}/comments?limit&sort` | Комментарии к посту → `{ data: { comments: [], total, hasMore, nextCursor } }`. sort: `newest`, `oldest`, `popular` |
+| POST | `/api/posts/{postId}/comments` | Добавить комментарий. `{ content?, attachmentIds? }` — голосовые: content пустой, attachmentIds с id из uploadFile (audio/ogg) |
+| POST | `/api/comments/{id}/replies` | Ответ на комментарий. `{ content, replyToUserId }` |
+| GET | `/api/comments/{id}/replies?page&limit&sort` | Ответы на комментарий (пагинация по page) |
+| POST | `/api/reports` | targetType: `post`, `comment`, `user`. 400 при повторном репорте: «Вы уже отправляли жалобу» |
+| DELETE | `/api/comments/{id}` | Удалить комментарий (пустой ответ). На своей стене можно удалять любые. |
+| POST/DELETE | `/api/comments/{id}/like` | Лайк/снять лайк на комментарий или реплай → `{ liked, likesCount }` |
+| POST | `/api/users/{username}/follow` | Подписаться → `{ following: true, followersCount }` |
+| DELETE | `/api/users/{username}/follow` | Отписаться → `{ following: false, followersCount }` |
+
+### Эндпоинты без подтверждения
+
+| Метод | Эндпоинт | Используется в |
+|-------|----------|----------------|
+| GET | `/api/posts?tab=popular` / `tab=following` | `getFeedPopular`, `getFeedFollowing` — в веб-интерфейсе нет переключения |
+| POST | `/api/notifications/{id}/read` | `markNotificationAsRead` |
+| GET | `/api/notifications/count` | `getNotificationCount`, `hasUnreadNotifications` |
+| GET | `/api/search/?q=&userLimit=&hashtagLimit=` | `search`, `searchUsers`, `searchHashtags` |
+
+Если какой‑то метод возвращает ошибку — проверь эндпоинт в DevTools.
+
 ## Структура SDK
 
 | Файл | Назначение |
@@ -14,7 +77,8 @@
 | `users.js` | Пользователи: getMyProfile, getUserProfile, followUser, getTopClans и др. |
 | `notifications.js` | Уведомления |
 | `hashtags.js` | Хэштеги |
-| `files.js` | Загрузка файлов |
+| `files.js` | Загрузка, получение, удаление файлов |
+| `verification.js` | Верификация: getStatus, submit |
 | `search.js` | Поиск |
 | `reports.js` | Жалобы |
 
@@ -177,13 +241,18 @@ const post = await client.createPost('Текст поста', 'image.jpg');
 
 ### Прочие методы постов
 
-- `getFeedPopular(limit, cursor)` — лента популярных постов. Возвращает `{ posts: [], pagination: {} }`.
-- `getFeedFollowing(limit, cursor)` — лента подписок. Требует авторизацию. Возвращает `{ posts: [], pagination: {} }`.
+- `getFeedPopular(limit, cursor)` — лента популярных постов. ⚠️ GET `/api/posts?tab=popular` **не подтверждён** (в веб-интерфейсе нет переключения). Тула для теста: `tools/test-feed-tabs.js`.
+- `getFeedFollowing(limit, cursor)` — лента подписок. ⚠️ GET `/api/posts?tab=following` **не подтверждён**. Требует авторизацию.
 - `getPostsList(username?, limit?)` — упрощенный метод, возвращает только массив постов (без pagination).
-- `editPost(postId, newContent)` — редактирование текста. Возвращает обновленный объект поста.
-- `deletePost(postId)` — удаление поста. Возвращает `boolean`.
-- `pinPost(postId)` — закрепление записи. Возвращает `boolean`.
-- `repost(postId, comment?)` — репост (нельзя репостнуть себя). Возвращает объект репоста.
+- `editPost(postId, newContent)` — редактирование текста. PUT `/api/posts/{id}`. `{ content }` → `{ id, content, updatedAt }`.
+- `viewPost(postId)` — отметить пост как просмотренный. POST `/api/posts/{id}/view`.
+- `getWallByUser(username, limit, cursor)` — посты на стене пользователя. GET `/api/posts/user/{username}/wall`.
+- `deletePost(postId)` — удаление поста. DELETE `/api/posts/{id}`. Возвращает `boolean`.
+- `restorePost(postId)` — восстановление удалённого поста. POST `/api/posts/{id}/restore`.
+- `getLikedPosts(username, limit, cursor)` — лайкнутые посты пользователя. GET `/api/posts/user/{username}/liked` → `{ posts: [], pagination }`.
+- `pinPost(postId)` — закрепить пост. POST `/api/posts/{id}/pin` → `{ success: true, pinnedPostId }`.
+- `unpinPost(postId)` — открепить пост. DELETE `/api/posts/{id}/pin` → `{ success: true, pinnedPostId: null }`.
+- `repost(postId, comment?)` — репост. POST `/api/posts/{id}/repost`. `{ content? }` (комментарий опционально). **attachmentIds не поддерживается** — API игнорирует вложения при репосте.
 - `likePost(postId)` **/** `unlikePost(postId)` — управление лайками. Возвращают `{ liked: boolean, likesCount: number }`.
 
 ---
@@ -192,14 +261,22 @@ const post = await client.createPost('Текст поста', 'image.jpg');
 
 ### getComments(postId, limit, sort)
 
-Получает дерево комментариев к посту.
+Получает дерево комментариев к посту. GET `/api/posts/{postId}/comments?limit&sort`.
 
 - **Параметры**: `postId`, `limit` (по умолчанию 20, в запросе ограничивается 1–100), `sort` — в SDK можно передавать `"popular"`, `"new"`, `"old"`; в API уходит `popular`, `newest`, `oldest` соответственно.
 - **Ответ API:** `{ data: { comments: [], total, hasMore, nextCursor } }`. Комментарии могут содержать вложенные `replies`, у ответов — поле `replyTo`.
+- **Отдельный эндпоинт для ответов:** GET `/api/comments/{id}/replies?page=1&limit=50&sort=oldest` — пагинация по `page`, не по cursor. В SDK нет отдельного метода `getReplies`; ответы приходят внутри `getComments`.
 
-### addComment(postId, text, replyToCommentId?)
+### addComment(postId, text, replyToCommentId?, attachmentIds?)
 
-Добавляет новый комментарий или ответ на существующий (POST к посту: `/api/posts/:postId/comments`).
+Добавляет новый комментарий. POST `/api/posts/{postId}/comments`. Payload: `{ content?, attachmentIds? }`.
+
+- **Текст**: `content` — текст комментария.
+- **Голосовое**: `content` пустой, `attachmentIds: [uploadedId]` — id из `uploadFile` (audio/ogg). Вложения в ответе имеют `type: "audio"`, `duration`, `mimeType: "audio/ogg"`.
+
+### addVoiceComment(postId, audioPath, replyToCommentId?)
+
+Добавляет голосовое сообщение. Загружает audio/ogg через `uploadFile` и создаёт комментарий с `attachmentIds`. Удобный метод поверх `addComment(postId, '', replyToCommentId, [uploadedId])`.
 
 ### replyToComment(commentId, content, replyToUserId)
 
@@ -215,8 +292,9 @@ const post = await client.createPost('Текст поста', 'image.jpg');
 
 ### Управление комментариями
 
-- `likeComment(commentId)` **/** `unlikeComment(commentId)` — лайки на комментарии.
-- `deleteComment(commentId)` — удаление комментария.
+- `likeComment(commentId)` **/** `unlikeComment(commentId)` — лайки на комментарии/реплаи. POST/DELETE `/api/comments/{id}/like` → `{ liked, likesCount }`.
+- `deleteComment(commentId)` — удаление комментария. DELETE `/api/comments/{id}` (пустой ответ). На своей стене можно удалять любые комментарии.
+- `restoreComment(commentId)` — восстановление удалённого комментария. POST `/api/comments/{id}/restore`.
 
 ---
 
@@ -224,10 +302,12 @@ const post = await client.createPost('Текст поста', 'image.jpg');
 
 - `getMyProfile()` — данные текущего аккаунта (требует auth).
 - `getUserProfile(username)` — публичный профиль любого пользователя.
-- `updateProfile(bio, displayName?)` — изменение описания и имени.
+- `updateProfile(bio?, displayName?, username?, bannerId?)` — обновление профиля. PUT `/api/users/me`. Поддерживает `bannerId` (ID из `uploadFile`).
+- `getPrivacy()` — настройки приватности. GET `/api/users/me/privacy` → `{ isPrivate, wallClosed }`.
+- `updatePrivacy({ isPrivate?, wallClosed? })` — обновление приватности. PUT `/api/users/me/privacy`.
 - `getFollowers(username, page, limit)` — список подписчиков.
 - `getFollowing(username, page, limit)` — список подписок.
-- `followUser(username)` **/** `unfollowUser(username)` — подписка/отписка.
+- `followUser(username)` **/** `unfollowUser(username)` — подписка/отписка. POST/DELETE `/api/users/{username}/follow` → `{ following, followersCount }`.
 - `getUserClan(username)` — получение эмодзи-аватара пользователя.
 
 ## Методы API: Управление токенами
@@ -239,26 +319,36 @@ const post = await client.createPost('Текст поста', 'image.jpg');
 
 **Кастомные запросы:** `client.get(path)`, `client.post(path, data)`, `client.put(path, data)`, `client.patch(path, data)`, `client.delete(path)` — для произвольных эндпоинтов (baseURL уже подставлен).
 
+- `changePassword(oldPassword, newPassword)` — смена пароля. POST `/api/v1/auth/change-password`. Требует cookies (refresh_token).
+- `getVerificationStatus()` — статус верификации. GET `/api/verification/status`.
+- `submitVerification(videoUrl)` — подать заявку на верификацию. POST `/api/verification/submit`. videoUrl — URL из `uploadFile`.
+- `getPlatformStatus()` — статус платформы. GET `/api/platform/status`.
+- `getFile(fileId)` — информация о файле. GET `/api/files/{id}`.
+- `deleteFile(fileId)` — удалить файл. DELETE `/api/files/{id}`.
+
 **Рекомендация:** При множественных запросах с интервалами (более 10-15 минут) вызывайте `validateAndRefreshToken()` перед каждым запросом.
 
 ---
 
 ## Методы API: Уведомления и поиск
 
-### getNotifications(limit, cursor, type?)
+### getNotifications(limit, offset, type?)
 
-Список уведомлений с фильтрацией по типу (`reply`, `like`, `wall_post`, `follow`, `comment`).
+Список уведомлений. GET `/api/notifications/?offset=0&limit=20` → `{ notifications: [], hasMore }`.
+
+- **Параметры**: `limit` (по умолчанию 20), `offset` (смещение для пагинации), `type` (фильтр на клиенте).
 
 ### Прочие методы уведомлений
 
-- `getNotificationsByType(type, limit, cursor)` — получение уведомлений конкретного типа.
-- `markNotificationAsRead(notificationId)` — пометка прочитанным. Возвращает `{ success: true }`.
-- `markAllNotificationsAsRead()` — пометка всех уведомлений (экспериментально).
-- `getNotificationCount()` — счетчик непрочитанных сообщений. Возвращает `number`.
+- `getNotificationsByType(type, limit, offset)` — уведомления конкретного типа. Возвращает `{ notifications: [], hasMore }`.
+- `markNotificationAsRead(notificationId)` — пометка одного прочитанным. ⚠️ Эндпоинт POST `/api/notifications/{id}/read` **не подтверждён**.
+- `markNotificationsAsReadBatch(ids)` — пометка нескольких. POST `/api/notifications/read-batch` → `{ success: true, count }`.
+- `markAllNotificationsAsRead()` — пометка всех. POST `/api/notifications/read-all` → `{ success: true }`.
+- `getNotificationCount()` — счетчик непрочитанных. ⚠️ Эндпоинт GET `/api/notifications/count` **не подтверждён**. Альтернатива: `hasUnread` можно вычислить по `getNotifications()` (поле `read` у каждого).
 
 ### Поиск и рекомендации
 
-- `search(query, userLimit?, hashtagLimit?)` — универсальный поиск пользователей и хэштегов. Возвращает `{ users: [], hashtags: [] }`.
+- `search(query, userLimit?, hashtagLimit?)` — универсальный поиск. ⚠️ Эндпоинт GET `/api/search/?q=&userLimit=&hashtagLimit=` **не подтверждён**. Возвращает `{ users: [], hashtags: [] }`.
 - `searchUsers(query, limit?)` — поиск только пользователей.
 - `searchHashtags(query, limit?)` — поиск только хэштегов.
 - `getTopClans()` — рейтинг кланов по количеству участников. **Возвращает массив** `Array<{ avatar, memberCount }>` или **`null`** при ошибке (не объект с полем `clans`).
@@ -269,7 +359,9 @@ const post = await client.createPost('Текст поста', 'image.jpg');
 ### Файлы и репорты
 
 - `uploadFile(filePath)` — загрузка файла через `/api/files/upload`. Возвращает `{ id, url, filename, mimeType, size }` или **`null`** при ошибке. Таймаут — `uploadTimeout` (по умолчанию 120 с). Используется автоматически при создании поста с изображением.
-- `report(targetType, targetId, reason?, description?)` — отправка репорта. `targetType`: `"post"`, `"comment"`, `"user"`. Возвращает `{ id, createdAt }`.
+- `getFile(fileId)` — информация о файле. GET `/api/files/{id}`.
+- `deleteFile(fileId)` — удалить файл. DELETE `/api/files/{id}`.
+- `report(targetType, targetId, reason?, description?)` — отправка репорта. `targetType`: `"post"`, `"comment"`, `"user"`. `reason`: `"spam"`, `"violence"`, `"hate"`, `"adult"`, `"fraud"`, `"other"`. Возвращает `{ id, createdAt }`. При повторном репорте того же контента API возвращает 400: «Вы уже отправляли жалобу на этот контент».
 - `reportPost(postId, reason?, description?)` — репорт поста.
 - `reportComment(commentId, reason?, description?)` — репорт комментария.
 - `reportUser(userId, reason?, description?)` — репорт пользователя.
@@ -303,7 +395,7 @@ const post = await client.createPost('Текст поста', 'image.jpg');
 ### Уведомления
 
 - `hasUnreadNotifications()` — проверка наличия непрочитанных уведомлений. Возвращает `boolean`.
-- `getUnreadNotifications(limit, cursor)` — только непрочитанные уведомления. Возвращает `{ notifications: [], pagination: {} }`.
+- `getUnreadNotifications(limit, offset)` — только непрочитанные. Возвращает `{ notifications: [], hasMore }`.
 
 ---
 
@@ -311,16 +403,28 @@ const post = await client.createPost('Текст поста', 'image.jpg');
 
 ### Пагинация
 
-Методы, возвращающие списки, используют курсорную пагинацию:
+Разные методы используют разную пагинацию:
+
+| Метод | Тип | Параметр | Пример ответа |
+|-------|-----|----------|---------------|
+| `getPosts`, `getComments`, `getPostsByHashtag`, `getLikedPosts` | cursor | `nextCursor` | `{ limit, nextCursor, hasMore }` |
+| `getNotifications`, `getUnreadNotifications` | offset | `offset` | `{ notifications, hasMore }` |
+| `getFollowers`, `getFollowing` | page | `page` | `{ page, limit, total, hasMore }` |
 
 ```javascript
+// Посты — cursor
 const result = await client.getPosts('username', 20, 'new');
-// result = { posts: [...], pagination: { limit: 20, nextCursor: "...", hasMore: true } }
-
-// Следующая страница
 if (result.pagination.hasMore) {
     const nextPage = await client.getPosts('username', 20, 'new', result.pagination.nextCursor);
 }
+
+// Уведомления — offset
+const notif = await client.getNotifications(20, 0);
+const next = await client.getNotifications(20, 20);
+
+// Подписчики — page
+const fol = await client.getFollowers('username', 1, 30);
+const nextPage = await client.getFollowers('username', 2, 30);
 ```
 
 ### Структура поста
@@ -367,7 +471,7 @@ if (result.pagination.hasMore) {
 
 ---
 
-**Последнее обновление документации**: 2026-01-28.
+**Последнее обновление документации**: 2026-01-31.
 
 ## Загрузка изображений
 
