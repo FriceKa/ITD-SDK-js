@@ -17,7 +17,7 @@ export class NotificationsManager {
      * @returns {Promise<Object|null>} { notifications: [], hasMore } или null при ошибке
      */
     async getNotifications(limit = 20, offset = 0, type = null) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -60,7 +60,7 @@ export class NotificationsManager {
      * @returns {Promise<Object|null>} { success: true, count } или null при ошибке
      */
     async markAsReadBatch(ids) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -87,7 +87,7 @@ export class NotificationsManager {
      * @returns {Promise<Object|null>} { success: true } или null при ошибке
      */
     async markAsRead(notificationId) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -122,7 +122,7 @@ export class NotificationsManager {
      * @returns {Promise<number|null>} Количество уведомлений или null при ошибке
      */
     async getUnreadCount() {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -156,7 +156,7 @@ export class NotificationsManager {
      * @returns {Promise<boolean>} True если успешно
      */
     async markAllAsRead() {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return false;
         }

@@ -24,7 +24,7 @@ export class CommentsManager {
      * @returns {Promise<Object|null>} Данные созданного комментария или null
      */
     async addComment(postId, text, replyToCommentId = null, attachmentIds = null) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -63,7 +63,7 @@ export class CommentsManager {
      * @returns {Promise<Object|null>} Данные созданного комментария или null
      */
     async addVoiceComment(postId, audioPath, replyToCommentId = null) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -81,7 +81,7 @@ export class CommentsManager {
      * @returns {Promise<Object|null>} Данные созданного комментария-ответа или null при ошибке
      */
     async replyToComment(commentId, content, replyToUserId) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -188,7 +188,7 @@ export class CommentsManager {
      * @returns {Promise<Object|null>} { liked: true, likesCount: number } или null при ошибке
      */
     async likeComment(commentId) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -219,7 +219,7 @@ export class CommentsManager {
      * @returns {Promise<Object|null>} { liked: false, likesCount: number } или null при ошибке
      */
     async unlikeComment(commentId) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -254,7 +254,7 @@ export class CommentsManager {
      * @returns {Promise<boolean>} True если успешно
      */
     async deleteComment(commentId) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return false;
         }
@@ -282,7 +282,7 @@ export class CommentsManager {
      * @returns {Promise<boolean>} True если успешно
      */
     async restoreComment(commentId) {
-        if (!await this.client.auth.checkAuth()) return false;
+        if (!await this.client.requireAuth()) return false;
         try {
             const url = `${this.client.baseUrl}/api/comments/${commentId}/restore`;
             const response = await this.axios.post(url);

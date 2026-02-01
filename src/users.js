@@ -18,7 +18,7 @@ export class UsersManager {
      * @returns {Promise<Object|null>} Обновленные данные профиля или null при ошибке
      */
     async updateProfile(bio = null, displayName = null, username = null, bannerId = null) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -61,7 +61,7 @@ export class UsersManager {
      * @returns {Promise<Object|null>} Данные профиля или null при ошибке
      */
     async getMyProfile() {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -96,7 +96,7 @@ export class UsersManager {
      * @returns {Promise<Object|null>} { isPrivate, wallClosed } или null при ошибке
      */
     async getPrivacy() {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -121,7 +121,7 @@ export class UsersManager {
      * @returns {Promise<Object|null>} { isPrivate, wallClosed } или null при ошибке
      */
     async updatePrivacy(options = {}) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -183,7 +183,7 @@ export class UsersManager {
      * @returns {Promise<Object|null>} { following: true, followersCount: number } или null при ошибке
      */
     async followUser(username) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -218,7 +218,7 @@ export class UsersManager {
      * @returns {Promise<Object|null>} { following: false, followersCount: number } или null при ошибке
      */
     async unfollowUser(username) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -385,7 +385,7 @@ export class UsersManager {
      * @returns {Promise<Array|null>} Массив пользователей или null при ошибке
      */
     async getWhoToFollow() {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -423,7 +423,7 @@ export class UsersManager {
      * @returns {Promise<boolean>} True если подписан, false если нет или ошибка
      */
     async isFollowing(username) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             return false;
         }
         const profile = await this.getUserProfile(username);

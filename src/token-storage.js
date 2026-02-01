@@ -15,12 +15,12 @@ export async function saveAccessToken(newToken, envPath = null) {
     try {
         const targetPath = envPath ?? path.join(process.cwd(), '.env');
 
+        let content;
         if (!fs.existsSync(targetPath)) {
-            console.warn('⚠️  Файл .env не найден, токен не сохранен');
-            return false;
+            content = '# ITD SDK - создано автоматически\nITD_BASE_URL=https://xn--d1ah4a.com\n';
+        } else {
+            content = fs.readFileSync(targetPath, 'utf8');
         }
-
-        let content = fs.readFileSync(targetPath, 'utf8');
         
         // Ищем строку с ITD_ACCESS_TOKEN
         const tokenRegex = /^ITD_ACCESS_TOKEN=.*$/m;

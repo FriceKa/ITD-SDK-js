@@ -18,7 +18,7 @@ export class ReportsManager {
      * @returns {Promise<Object|null>} { id, createdAt } или null при ошибке
      */
     async report(targetType, targetId, reason = 'other', description = '') {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт для отправки репорта');
             return null;
         }

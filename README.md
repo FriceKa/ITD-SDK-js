@@ -45,7 +45,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const client = new ITDClient();
-// Токен подхватывается из .env. Если только .cookies — await client.ensureAuthenticated();
+// Один раз добавьте .cookies (refresh_token) или ITD_ACCESS_TOKEN в .env — дальше всё автоматически
 
 // Получаем профиль и тренды
 const myProfile = await client.getMyProfile();

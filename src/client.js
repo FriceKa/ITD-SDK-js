@@ -90,6 +90,9 @@ export class ITDClient {
         // ВАЖНО: это чувствительные данные — не коммитьте .cookies
         this._loadCookiesFromFile();
 
+        // Создаём .env если его нет — чтобы после refresh можно было сохранить токен
+        this._ensureEnvFile();
+
         // Создание axios instance + cookie jar
         const axiosConfig = {
             baseURL: this.baseUrl,
@@ -202,6 +205,11 @@ export class ITDClient {
         this.reports = new ReportsManager(this);
         this.searchManager = new SearchManager(this);
         this.verification = new VerificationManager(this);
+
+        // Если нет токена, но есть refresh_token — сразу запускаем refresh при старте
+        if (!this.accessToken && this.hasRefreshToken()) {
+            this._startupRefreshPromise = this.refreshAccessToken();
+        }
     }
 
     /**
@@ -214,14 +222,30 @@ export class ITDClient {
 
     /**
      * Убедиться, что есть accessToken. Если нет, но есть refresh_token в cookies — вызывает refresh.
-     * Для сценария «только .cookies»: await client.ensureAuthenticated() перед первым запросом.
+     * При создании клиента refresh уже запускается в фоне; этот метод дожидается его или делает свой.
      * @returns {Promise<boolean>} true если токен есть или получен, false если нет
      */
     async ensureAuthenticated() {
         if (this.accessToken) return true;
+        // Дожидаемся refresh, запущенного при создании клиента
+        if (this._startupRefreshPromise) {
+            await this._startupRefreshPromise;
+            this._startupRefreshPromise = null;
+            if (this.accessToken) return true;
+        }
         if (!this.hasRefreshToken()) return false;
         const token = await this.refreshAccessToken();
         return !!token;
+    }
+
+    /**
+     * Проверяет авторизацию и при необходимости обновляет токен через refresh.
+     * Вызывается автоматически методами SDK перед запросами, требующими auth.
+     * Позволяет один раз загрузить .cookies (с refresh_token) и не думать об обновлении токена.
+     * @returns {Promise<boolean>} true если есть токен (или успешно получен через refresh)
+     */
+    async requireAuth() {
+        return await this.ensureAuthenticated();
     }
 
     /**
@@ -272,6 +296,24 @@ export class ITDClient {
         return this.axios.delete(path, config);
     }
     
+    /**
+     * Создаёт минимальный .env если файла нет. Нужно, чтобы после refresh сохранить токен.
+     * @private
+     */
+    _ensureEnvFile() {
+        try {
+            if (fs.existsSync(this.envPath)) return;
+            const defaults = [
+                '# ITD SDK - создано автоматически',
+                'ITD_BASE_URL=https://xn--d1ah4a.com',
+                'ITD_ACCESS_TOKEN=',
+            ].join('\n') + '\n';
+            fs.writeFileSync(this.envPath, defaults, 'utf8');
+        } catch (e) {
+            // Не валим процесс
+        }
+    }
+
     /**
      * Загружает cookies из файла .cookies
      * @private
@@ -542,7 +584,7 @@ export class ITDClient {
      * @returns {Promise<Object|null>} { liked: true, likesCount: number } или null при ошибке
      */
     async likePost(postId) {
-        if (!await this.auth.checkAuth()) {
+        if (!await this.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -573,7 +615,7 @@ export class ITDClient {
      * @returns {Promise<Object|null>} { liked: false, likesCount: number } или null при ошибке
      */
     async unlikePost(postId) {
-        if (!await this.auth.checkAuth()) {
+        if (!await this.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }

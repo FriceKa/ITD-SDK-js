@@ -127,7 +127,7 @@ export class AuthManager {
      * @returns {Promise<Object|null>} Ответ API или null при ошибке
      */
     async changePassword(oldPassword, newPassword) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходим accessToken');
             return null;
         }

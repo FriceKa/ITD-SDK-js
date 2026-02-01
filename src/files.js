@@ -19,7 +19,7 @@ export class FilesManager {
      * @returns {Promise<Object|null>} { id, url, filename, mimeType, size } или null при ошибке
      */
     async uploadFile(filePath) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -67,7 +67,7 @@ export class FilesManager {
      * @returns {Promise<Object|null>} { id, url, filename, mimeType, size, ... } или null
      */
     async getFile(fileId) {
-        if (!await this.client.auth.checkAuth()) return null;
+        if (!await this.client.requireAuth()) return null;
         try {
             const url = `${this.client.baseUrl}/api/files/${fileId}`;
             const response = await this.axios.get(url);
@@ -88,7 +88,7 @@ export class FilesManager {
      * @returns {Promise<boolean>} True если успешно
      */
     async deleteFile(fileId) {
-        if (!await this.client.auth.checkAuth()) return false;
+        if (!await this.client.requireAuth()) return false;
         try {
             const url = `${this.client.baseUrl}/api/files/${fileId}`;
             const response = await this.axios.delete(url);

@@ -7,7 +7,7 @@
 | Метод | Эндпоинт | Описание |
 |-------|----------|----------|
 | GET | `/api/users/{username}` | Профиль → `{ id, username, displayName, avatar, banner, bio, verified, pinnedPostId, wallClosed, followersCount, followingCount, postsCount, isFollowing, isFollowedBy, createdAt }` |
-| GET | `/api/users/{username}/followers?page=1&limit=30` | Подписчики → `{ data: { users: [], pagination: { page, limit, total, hasMore } } }` |
+| GET | `/api/users/{username}/followers?page=1&limit=30` | Подписчики → `{ data: { users: [], pagination } }`. ⚠️ Проблема на стороне итд.com: `page` игнорируется, всегда одна страница |
 | GET | `/api/users/{username}/following?page=1&limit=30` | Подписки → `{ data: { users: [], pagination } }` |
 | GET | `/api/posts/user/{username}?limit=20&sort=new` | Посты пользователя → `{ data: { posts: [], pagination: { limit, nextCursor, hasMore } } }` |
 | GET | `/api/posts/user/{username}/liked?limit=20` | Лайкнутые посты → `{ data: { posts: [], pagination } }` |
@@ -90,7 +90,7 @@
 | Файл | Назначение |
 |------|------------|
 | `client.js` | Главный клиент: создание axios, загрузка cookies, хранение токена, менеджеры, хелперы `get/post/put/patch/delete` |
-| `auth.js` | Авторизация: refresh, logout, checkAuth, ensureAuthenticated, validateAndRefreshToken |
+| `auth.js` | Авторизация: refresh, logout, requireAuth (авто), ensureAuthenticated, validateAndRefreshToken |
 | `token-storage.js` | Сохранение токена в .env и cookies в .cookies (используется auth при refresh) |
 | `posts.js` | Посты: createPost, getPosts, editPost, deletePost и др. |
 | `comments.js` | Комментарии: addComment, replyToComment, getComments, likeComment и др. |
@@ -120,9 +120,9 @@ import { ITDClient } from 'itd-sdk-js';
 
 ### 1. Переменные окружения (.env)
 
-Создайте файл `.env` в корне проекта и укажите следующие параметры:
+Если файла `.env` нет — SDK создаст его автоматически при первом запуске (с `ITD_BASE_URL` и пустым `ITD_ACCESS_TOKEN`). После refresh токен сохранится в `.env`.
 
-- `ITD_ACCESS_TOKEN` — ваш JWT токен.
+- `ITD_ACCESS_TOKEN` — JWT токен. Опционально: при наличии `.cookies` с `refresh_token` токен получится и сохранится сам.
 - `ITD_BASE_URL` — `https://xn--d1ah4a.com`.
 - `ITD_USER_AGENT` — строка User-Agent из браузера.
 
@@ -150,12 +150,7 @@ const client = new ITDClient();
 // Токен подхватывается из .env автоматически
 ```
 
-**Только .cookies (без ITD_ACCESS_TOKEN в .env):**
-
-```javascript
-const client = new ITDClient();
-await client.ensureAuthenticated(); // получит токен через refresh из .cookies
-```
+**Автоматическая авторизация:** методы `createPost`, `getMyProfile` и др. сами проверяют токен и при необходимости получают его через refresh из `.cookies`. Вызывать `ensureAuthenticated()` вручную не обязательно — достаточно один раз добавить `.cookies` (с `refresh_token`) или `ITD_ACCESS_TOKEN` в `.env`.
 
 **С опциями (projectRoot / envPath / cookiesPath):**
 
@@ -446,6 +441,8 @@ const post = await client.createPost('Текст поста', 'image.jpg');
 | `getPosts`, `getComments`, `getPostsByHashtag`, `getLikedPosts` | cursor | `nextCursor` | `{ limit, nextCursor, hasMore }` |
 | `getNotifications`, `getUnreadNotifications` | offset | `offset` | `{ notifications, hasMore }` |
 | `getFollowers`, `getFollowing` | page | `page` | `{ page, limit, total, hasMore }` |
+
+**⚠️ Проблема на стороне итд.com:** пагинация `/api/users/{username}/followers?page=...` не работает — всегда возвращается одна и та же страница, независимо от `page`. Эндпоинт `/api/users/{username}/following` работает корректно.
 
 ```javascript
 // Посты — cursor

@@ -25,7 +25,7 @@ export class PostsManager {
      * @returns {Promise<Object|null>} Данные созданного поста или null при ошибке
      */
     async createPost(text, imagePath = null) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -84,7 +84,7 @@ export class PostsManager {
      * @returns {Promise<Object|null>} Данные созданного поста или null при ошибке
      */
     async createWallPost(username, text, imagePath = null) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -160,7 +160,7 @@ export class PostsManager {
      */
     async getPosts(username = null, limit = 20, sort = 'new', cursor = null, tab = null, type = null, filter = null) {
         // Если username не указан и tab указан, запрашиваем ленту - требуется авторизация
-        if (!username && (tab || type || filter) && !await this.client.auth.checkAuth()) {
+        if (!username && (tab || type || filter) && !await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт для получения ленты');
             return { posts: [], pagination: {} };
         }
@@ -281,7 +281,7 @@ export class PostsManager {
      * @returns {Promise<Object>} Объект с постами и пагинацией: { posts: [], pagination: {} }
      */
     async getFeedFollowing(limit = 20, cursor = null) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт для получения ленты подписок');
             return { posts: [], pagination: {} };
         }
@@ -296,7 +296,7 @@ export class PostsManager {
      * @returns {Promise<boolean>} True если успешно
      */
     async viewPost(postId) {
-        if (!await this.client.auth.checkAuth()) return false;
+        if (!await this.client.requireAuth()) return false;
         try {
             const url = `${this.client.baseUrl}/api/posts/${postId}/view`;
             const response = await this.axios.post(url);
@@ -376,7 +376,7 @@ export class PostsManager {
      * @returns {Promise<Object|null>} Обновленные данные поста или null
      */
     async editPost(postId, newContent) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -414,7 +414,7 @@ export class PostsManager {
      * @returns {Promise<boolean>} True если успешно
      */
     async deletePost(postId) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return false;
         }
@@ -442,7 +442,7 @@ export class PostsManager {
      * @returns {Promise<boolean>} True если успешно
      */
     async restorePost(postId) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return false;
         }
@@ -464,7 +464,7 @@ export class PostsManager {
      * @returns {Promise<boolean>} True если успешно
      */
     async pinPost(postId) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return false;
         }
@@ -489,7 +489,7 @@ export class PostsManager {
      * @returns {Promise<boolean>} True если успешно
      */
     async unpinPost(postId) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return false;
         }
@@ -514,7 +514,7 @@ export class PostsManager {
      * @returns {Promise<Object|null>} Данные созданного репоста или null при ошибке
      */
     async repost(postId, comment = null) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт');
             return null;
         }
@@ -581,7 +581,7 @@ export class PostsManager {
      * @returns {Promise<Object>} { posts: [], pagination: {} }
      */
     async getMyPosts(limit = 20, sort = 'new', cursor = null) {
-        if (!await this.client.auth.checkAuth()) {
+        if (!await this.client.requireAuth()) {
             console.error('Ошибка: необходимо войти в аккаунт для получения своих постов');
             return { posts: [], pagination: {} };
         }

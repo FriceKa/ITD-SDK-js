@@ -13,7 +13,7 @@ export class VerificationManager {
      * @returns {Promise<Object|null>} Статус верификации или null
      */
     async getStatus() {
-        if (!await this.client.auth.checkAuth()) return null;
+        if (!await this.client.requireAuth()) return null;
         try {
             const url = `${this.client.baseUrl}/api/verification/status`;
             const response = await this.axios.get(url);
@@ -34,7 +34,7 @@ export class VerificationManager {
      * @returns {Promise<Object|null>} { success, request: { id, status, ... } } или null
      */
     async submit(videoUrl) {
-        if (!await this.client.auth.checkAuth()) return null;
+        if (!await this.client.requireAuth()) return null;
         try {
             const url = `${this.client.baseUrl}/api/verification/submit`;
             const response = await this.axios.post(url, { videoUrl });
