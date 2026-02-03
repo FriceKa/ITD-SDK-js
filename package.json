@@ -1,11 +1,12 @@
 {
   "name": "itd-sdk-js",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Unofficial SDK for итд.com - Node.js library for working with API. Automatic token refresh, session management, and convenient methods for posts, comments, users, and notifications.",
   "main": "src/client.js",
   "type": "module",
   "exports": {
-    ".": "./src/client.js"
+    ".": "./src/client.js",
+    "./mirrors": "./src/mirror-pool.js"
   },
   "files": [
     "src/",
@@ -18,10 +19,12 @@
     "examples/token-validation.js",
     "examples/README.md",
     ".env.example",
-    ".cookies.example"
+    ".cookies.example",
+    ".cookies.mirrors.example"
   ],
   "scripts": {
-    "test": "node examples/basic-usage.js"
+    "test": "node examples/basic-usage.js",
+    "capture-endpoints": "node tools/browser-capture-endpoints.js"
   },
   "keywords": [
     "itd",
@@ -47,6 +50,9 @@
   "homepage": "https://github.com/FriceKa/ITD-SDK-js#readme",
   "engines": {
     "node": ">=14.0.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
   },
   "dependencies": {
     "axios": "^1.6.0",

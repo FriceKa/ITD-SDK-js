@@ -55,14 +55,16 @@
 | DELETE | `/api/users/{username}/follow` | Отписаться → `{ following: false, followersCount }` |
 | POST | `/api/notifications/{id}/read` | Отметить одно уведомление прочитанным |
 | GET | `/api/notifications/count` | Счётчик непрочитанных |
+| GET | `/api/hashtags?q=&limit=` | Поиск хэштегов → `{ data: { hashtags: [] } }` или `{ hashtags: [] }`. Без `q` — список. |
+| GET | `/api/users/search?q=&limit=` | Поиск пользователей (требует авторизации) → `{ users: [] }` |
+| GET | `/api/notifications/stream` | SSE‑стрим уведомлений (требует авторизации). В SDK: `getNotificationStream({ onEvent, onError })` → `{ close() }` |
 
 ### Эндпоинты без подтверждения
 
 | Метод | Эндпоинт | Используется в |
 |-------|----------|----------------|
 | GET | `/api/posts?tab=popular` / `tab=following` | `getFeedPopular`, `getFeedFollowing` — в веб-интерфейсе нет переключения |
-| GET | `/api/search/?q=&userLimit=&hashtagLimit=` | `search`, `searchUsers`, `searchHashtags` |
-| GET | `/api/notifications/stream` | SSE‑стрим уведомлений (не реализован в SDK) |
+| GET | `/api/search/?q=&userLimit=&hashtagLimit=` | Универсальный поиск `search()` — не подтверждён; `searchUsers`/`searchHashtags` используют `/api/users/search` и `/api/hashtags` |
 
 ### Официальные роуты с сайта
 
@@ -74,22 +76,64 @@
 | **users** | me, profile(id), updateProfile, privacy, follow(id), followers(id), following(id), who-to-follow, top-clans, search | ✓ |
 | **posts** | list, single(id), create, update(id), delete(id), restore(id), like(id), repost(id), view(id), pin(id), byUser(id), likedByUser(id), wallByUser(id), comments(id) | ✓ |
 | **comments** | delete(id), restore(id), like(id), replies(id) | ✓ |
-| **notifications** | list, count, markRead(id), markReadBatch, markAllRead, **stream** | без stream |
+| **notifications** | list, count, markRead(id), markReadBatch, markAllRead, **stream** | ✓ (в т.ч. stream) |
 | **files** | upload, get(id), delete(id) | ✓ |
 | **reports** | create | ✓ |
-| **hashtags** | search, trending, posts(name) | без search |
-| **search** | global | ✓ |
+| **hashtags** | search, trending, posts(name) | ✓ |
+| **search** | global | ✓ (searchUsers → /api/users/search, searchHashtags → /api/hashtags) |
 | **verification** | status, submit | ✓ |
 
-В SDK нет: sign-up/sign-in (поток браузера), verify-otp/resend-otp, forgot/reset-password, OAuth (yandex/google), notifications/stream, users/search, hashtags/search.
+В SDK нет: sign-up/sign-in (поток браузера), verify-otp/resend-otp, forgot/reset-password, OAuth (yandex/google).
 
 Если какой‑то метод возвращает ошибку — проверь эндпоинт в DevTools.
+
+## Пул зеркал (опционально)
+
+Для сценариев с высокой частотой запросов (боты, массовая проверка упоминаний и т.п.) можно распределить нагрузку по нескольким аккаунтам. Поведение одного аккаунта **не меняется**: по умолчанию вы по‑прежнему используете один `ITDClient`.
+
+Подключение пула — отдельный импорт: `import { createMirrorPool } from 'itd-sdk-js/mirrors';`
+
+### Автоматическое и ручное распределение
+
+- **По умолчанию распределение автоматическое**: каждый вызов метода (`getNotifications`, `addComment`, `posts.getPosts` и т.д.) выполняется через **очередной** клиент в пуле по кругу. Ничего настраивать не нужно.
+- **Ручной режим**: несколько операций подряд с одного аккаунта — возьмите клиента: `const client = pool.getClient(); await client.getNotifications(10); await client.addComment(postId, '...');`
+
+### Один файл с куками для всех зеркал
+
+Куки всех зеркал можно хранить в одном файле (например `.cookies.mirrors`) в формате JSON. Скопируйте `.cookies.mirrors.example` в `.cookies.mirrors` и заполните.
+
+```javascript
+const pool = createMirrorPool({
+  mirrorsCookiesPath: '.cookies.mirrors',
+  projectRoot: process.cwd(),
+  baseOptions: { baseUrl: 'https://xn--d1ah4a.com' },
+});
+```
+
+Формат `.cookies.mirrors`: ключ — имя аккаунта, значение — строка cookies или объект `{ "refresh_token": "..." }`. При refresh обновлённые куки сохраняются в `.cookies.mirrors.<ключ>` и `.env.mirrors.<ключ>`.
+
+### Отдельные файлы на каждый аккаунт
+
+```javascript
+const pool = createMirrorPool([
+  { cookiesPath: '.cookies_gork',   envPath: '.env_gork' },
+  { cookiesPath: '.cookies_gork_1', envPath: '.env_gork_1' },
+]);
+const list = await pool.getNotifications(20);
+await pool.addComment(postId, 'Ответ');
+```
+
+- **pool.getClient()** / **pool.nextClient()** — следующий клиент (для ручного режима).
+- **pool.clients** — массив клиентов, **pool.size** — их количество.
+
+Код под один `ITDClient` не меняется; пул используйте только там, где нужна разгрузка по аккаунтам.
 
 ## Структура SDK
 
 | Файл | Назначение |
 |------|------------|
 | `client.js` | Главный клиент: создание axios, загрузка cookies, хранение токена, менеджеры, хелперы `get/post/put/patch/delete` |
+| `mirror-pool.js` | Пул зеркал: `createMirrorPool(configs)` — распределение запросов по нескольким аккаунтам (подключение: `itd-sdk-js/mirrors`) |
 | `auth.js` | Авторизация: refresh, logout, requireAuth (авто), ensureAuthenticated, validateAndRefreshToken |
 | `token-storage.js` | Сохранение токена в .env и cookies в .cookies (используется auth при refresh) |
 | `posts.js` | Посты: createPost, getPosts, editPost, deletePost и др. |
@@ -376,12 +420,13 @@ const post = await client.createPost('Текст поста', 'image.jpg');
 - `markNotificationsAsReadBatch(ids)` — пометка нескольких. POST `/api/notifications/read-batch` → `{ success: true, count }`.
 - `markAllNotificationsAsRead()` — пометка всех. POST `/api/notifications/read-all` → `{ success: true }`.
 - `getNotificationCount()` — счетчик непрочитанных. GET `/api/notifications/count`. Альтернатива: `hasUnread` можно вычислить по `getNotifications()` (поле `read` у каждого).
+- `getNotificationStream({ onEvent, onError })` — SSE-стрим уведомлений. GET `/api/notifications/stream` (требует авторизации). Возвращает `Promise<{ close() }|null>`. Вызов `close()` останавливает стрим. Используется нативный `fetch` (не axios), передаётся только Bearer-токен.
 
 ### Поиск и рекомендации
 
 - `search(query, userLimit?, hashtagLimit?)` — универсальный поиск. ⚠️ Эндпоинт GET `/api/search/?q=&userLimit=&hashtagLimit=` **не подтверждён**. Возвращает `{ users: [], hashtags: [] }`.
-- `searchUsers(query, limit?)` — поиск только пользователей.
-- `searchHashtags(query, limit?)` — поиск только хэштегов.
+- `searchUsers(query, limit?)` — поиск пользователей. GET `/api/users/search?q=&limit=` (требует авторизации). По умолчанию `limit=20`.
+- `searchHashtags(query, limit?)` — поиск хэштегов. GET `/api/hashtags?q=&limit=`. По умолчанию `limit=20`.
 - `getTopClans()` — рейтинг кланов по количеству участников. **Возвращает массив** `Array<{ avatar, memberCount }>` или **`null`** при ошибке (не объект с полем `clans`).
 - `getWhoToFollow()` — рекомендованные пользователи.
 - `getTrendingHashtags(limit)` — список популярных тегов.

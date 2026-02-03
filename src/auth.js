@@ -104,12 +104,15 @@ export class AuthManager {
             return null;
         } catch (error) {
             if (error.response) {
+                const status = error.response.status;
                 const errorData = error.response.data;
                 if (errorData?.error?.code === 'REFRESH_TOKEN_MISSING') {
                     console.error('❌ Не удалось обновить токен: refresh_token не найден');
                     console.error('💡 Решение: обновите файл .cookies из браузера (см. инструкцию выше)');
+                } else if (status === 429) {
+                    console.error('❌ Rate limit (429): слишком много запросов. Подождите 1–2 минуты и повторите.');
                 } else {
-                    console.error('refreshAccessToken failed:', error.response.status, error.response.data);
+                    console.error('refreshAccessToken failed:', status, errorData);
                 }
             } else {
                 console.error('refreshAccessToken failed:', error.message);

@@ -90,6 +90,45 @@ export class UsersManager {
     }
 
     /**
+     * Ищет пользователей по запросу.
+     * GET /api/users/search?q=...&limit=... (требует авторизации)
+     *
+     * @param {string} query - Поисковый запрос
+     * @param {number} limit - Максимальное количество пользователей (по умолчанию 20)
+     * @returns {Promise<Object|null>} { users: [] } или null при ошибке
+     */
+    async searchUsers(query, limit = 20) {
+        if (!await this.client.requireAuth()) {
+            console.error('Ошибка: для поиска пользователей необходима авторизация');
+            return null;
+        }
+        try {
+            const url = `${this.client.baseUrl}/api/users/search`;
+            const params = { limit };
+            if (query != null && String(query).trim() !== '') {
+                params.q = String(query).trim();
+            }
+            const response = await this.axios.get(url, { params });
+
+            if (response.status === 200) {
+                const data = response.data;
+                const users = data?.data?.users ?? data?.users ?? [];
+                return { users: Array.isArray(users) ? users : [] };
+            } else {
+                console.error(`Ошибка поиска пользователей: ${response.status}`);
+                return null;
+            }
+        } catch (error) {
+            console.error('Исключение при поиске пользователей:', error.message);
+            if (error.response) {
+                console.error('Response status:', error.response.status);
+                console.error('Response data:', error.response.data);
+            }
+            return null;
+        }
+    }
+
+    /**
      * Получает настройки приватности текущего пользователя.
      * GET /api/users/me/privacy → { isPrivate, wallClosed }
      *

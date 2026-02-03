@@ -36,9 +36,10 @@ export class ITDClient {
      * @param {number} [options.requestTimeout] - Таймаут обычных запросов в мс (по умолчанию 60000)
      * @param {number} [options.uploadTimeout] - Таймаут загрузки файлов и создания поста в мс (по умолчанию 120000)
      * @param {string} [options.accessToken] - JWT токен (если не указан — берётся из .env ITD_ACCESS_TOKEN)
+     * @param {string} [options.cookiesString] - Строка cookies (как в .cookies: "name=value; name2=value2"). Если задана — куки берутся из неё, а не из файла; cookiesPath по‑прежнему используется для сохранения при refresh.
      */
     constructor(baseUrlOrOptions = null, userAgent = null) {
-        let baseUrl, projectRoot, envPath, cookiesPath, requestTimeout, uploadTimeout, accessToken;
+        let baseUrl, projectRoot, envPath, cookiesPath, requestTimeout, uploadTimeout, accessToken, cookiesString;
 
         if (baseUrlOrOptions && typeof baseUrlOrOptions === 'object' && !(baseUrlOrOptions instanceof URL)) {
             const opts = baseUrlOrOptions;
@@ -50,6 +51,7 @@ export class ITDClient {
             requestTimeout = opts.requestTimeout ?? 60000;
             uploadTimeout = opts.uploadTimeout ?? 120000;
             accessToken = opts.accessToken ?? process.env.ITD_ACCESS_TOKEN ?? null;
+            cookiesString = opts.cookiesString ?? null;
         } else {
             projectRoot = process.cwd();
             baseUrl = baseUrlOrOptions || process.env.ITD_BASE_URL || 'https://xn--d1ah4a.com';
@@ -58,6 +60,7 @@ export class ITDClient {
             requestTimeout = 60000;
             uploadTimeout = 120000;
             accessToken = process.env.ITD_ACCESS_TOKEN ?? null;
+            cookiesString = null;
         }
 
         // Используем реальный домен (IDN: итд.com = xn--d1ah4a.com)
@@ -86,9 +89,12 @@ export class ITDClient {
         // Поэтому используем CookieJar, чтобы сессия сохранялась как в браузере.
         this.cookieJar = new CookieJar();
 
-        // Cookies загружаются из отдельного файла .cookies (чтобы избежать проблем с ; в .env)
-        // ВАЖНО: это чувствительные данные — не коммитьте .cookies
-        this._loadCookiesFromFile();
+        // Cookies: из строки (опция cookiesString) или из файла .cookies
+        if (cookiesString != null && typeof cookiesString === 'string' && cookiesString.trim()) {
+            this._loadCookiesFromString(cookiesString.trim());
+        } else {
+            this._loadCookiesFromFile();
+        }
 
         // Создаём .env если его нет — чтобы после refresh можно было сохранить токен
         this._ensureEnvFile();
@@ -315,37 +321,39 @@ export class ITDClient {
     }
 
     /**
+     * Загружает cookies из строки (формат как в .cookies: "name=value; name2=value2")
+     * @private
+     */
+    _loadCookiesFromString(cookieHeader) {
+        try {
+            const parts = cookieHeader.split(';').map((p) => p.trim()).filter(Boolean);
+            const domain = new URL(this.baseUrl).hostname;
+            for (const part of parts) {
+                const [name, ...valueParts] = part.split('=');
+                if (name && valueParts.length > 0) {
+                    const value = valueParts.join('=').trim();
+                    const cookieString = `${name}=${value}; Domain=${domain}; Path=/`;
+                    this.cookieJar.setCookieSync(cookieString, this.baseUrl);
+                }
+            }
+        } catch (e) {
+            console.warn('⚠️  Не удалось загрузить cookies из строки:', e?.message || e);
+        }
+    }
+
+    /**
      * Загружает cookies из файла .cookies
      * @private
      */
     _loadCookiesFromFile() {
         try {
             if (!fs.existsSync(this.cookiesPath)) {
-                // Файл не существует - это нормально, просто пропускаем
                 return;
             }
-            
             const cookieHeader = fs.readFileSync(this.cookiesPath, 'utf8').trim();
-            if (!cookieHeader) {
-                return;
-            }
-            
-            // Парсим cookies
-            const parts = cookieHeader.split(';').map((p) => p.trim()).filter(Boolean);
-            const domain = new URL(this.baseUrl).hostname;
-            
-            for (const part of parts) {
-                // part вида "name=value"
-                const [name, ...valueParts] = part.split('=');
-                if (name && valueParts.length > 0) {
-                    const value = valueParts.join('='); // На случай если в value есть = 
-                    // Создаем cookie с правильным форматом для tough-cookie
-                    const cookieString = `${name}=${value}; Domain=${domain}; Path=/`;
-                    this.cookieJar.setCookieSync(cookieString, this.baseUrl);
-                }
-            }
+            if (!cookieHeader) return;
+            this._loadCookiesFromString(cookieHeader);
         } catch (e) {
-            // Не валим процесс — просто предупреждаем в консоль
             console.warn('⚠️  Не удалось загрузить cookies из .cookies:', e?.message || e);
         }
     }
@@ -903,6 +911,19 @@ export class ITDClient {
     async getNotificationCount() {
         return await this.notifications.getUnreadCount();
     }
+
+    /**
+     * Открывает SSE-стрим уведомлений (GET /api/notifications/stream).
+     * Требует авторизации. Возвращает объект с методом close() для остановки стрима.
+     *
+     * @param {Object} [options]
+     * @param {function(Object): void} [options.onEvent] - Вызывается при каждом SSE-событии
+     * @param {function(Error): void} [options.onError] - Вызывается при ошибке
+     * @returns {Promise<{ close: function() }|null>}
+     */
+    async getNotificationStream(options = {}) {
+        return await this.notifications.getNotificationStream(options);
+    }
     
     /**
      * Получает трендовые хэштеги
@@ -1073,24 +1094,24 @@ export class ITDClient {
     }
     
     /**
-     * Ищет пользователей
-     * 
+     * Ищет пользователей (GET /api/users/search, требует авторизации).
+     *
      * @param {string} query - Поисковый запрос
-     * @param {number} limit - Максимальное количество пользователей (по умолчанию 5)
+     * @param {number} limit - Максимальное количество пользователей (по умолчанию 20)
      * @returns {Promise<Array|null>} Массив пользователей или null при ошибке
      */
-    async searchUsers(query, limit = 5) {
+    async searchUsers(query, limit = 20) {
         return await this.searchManager.searchUsers(query, limit);
     }
     
     /**
-     * Ищет хэштеги
-     * 
+     * Ищет хэштеги (GET /api/hashtags?q=...).
+     *
      * @param {string} query - Поисковый запрос
-     * @param {number} limit - Максимальное количество хэштегов (по умолчанию 5)
+     * @param {number} limit - Максимальное количество хэштегов (по умолчанию 20)
      * @returns {Promise<Array|null>} Массив хэштегов или null при ошибке
      */
-    async searchHashtags(query, limit = 5) {
+    async searchHashtags(query, limit = 20) {
         return await this.searchManager.searchHashtags(query, limit);
     }
     

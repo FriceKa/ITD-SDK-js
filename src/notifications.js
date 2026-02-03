@@ -210,4 +210,83 @@ export class NotificationsManager {
         return { notifications: unread, hasMore: all.hasMore };
     }
 
+    /**
+     * Открывает SSE-стрим уведомлений (GET /api/notifications/stream).
+     * Требует авторизации. В Node.js используется fetch + потоковая разборка SSE.
+     *
+     * @param {Object} options
+     * @param {function(Object): void} [options.onEvent] - Вызывается при каждом событии (data — распарсенный JSON или строка)
+     * @param {function(Error): void} [options.onError] - Вызывается при ошибке чтения/сети
+     * @returns {Promise<{ close: function() }|null>} Объект с методом close() для остановки стрима, или null если не авторизован/ошибка старта
+     */
+    async getNotificationStream(options = {}) {
+        if (!await this.client.requireAuth()) {
+            console.error('Ошибка: для стрима уведомлений необходима авторизация');
+            return null;
+        }
+
+        const { onEvent = () => {}, onError = (err) => console.error('Notification stream error:', err.message) } = options;
+        const url = `${this.client.baseUrl}/api/notifications/stream`;
+        const controller = new AbortController();
+        const token = this.client.accessToken;
+
+        try {
+            const response = await fetch(url, {
+                signal: controller.signal,
+                headers: {
+                    'Accept': 'text/event-stream',
+                    'Cache-Control': 'no-cache',
+                    'Authorization': token ? `Bearer ${token}` : '',
+                    ...(this.client.userAgent && { 'User-Agent': this.client.userAgent }),
+                },
+            });
+
+            if (!response.ok || !response.body) {
+                onError(new Error(`Stream failed: ${response.status}`));
+                return null;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            (async () => {
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() ?? '';
+                        let currentData = null;
+                        for (const line of lines) {
+                            if (line.startsWith('data:')) {
+                                currentData = line.slice(5).trim();
+                            } else if (line === '' && currentData !== null) {
+                                try {
+                                    const parsed = currentData === '' ? null : JSON.parse(currentData);
+                                    onEvent(parsed);
+                                } catch {
+                                    onEvent(currentData);
+                                }
+                                currentData = null;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    if (e.name !== 'AbortError') onError(e);
+                }
+            })();
+
+            return {
+                close() {
+                    controller.abort();
+                },
+            };
+        } catch (err) {
+            onError(err);
+            return null;
+        }
+    }
+
 }

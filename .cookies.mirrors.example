@@ -1,0 +1,5 @@
+{
+  "gork": "refresh_token=YOUR_REFRESH_TOKEN_1; __ddg1_=...; is_auth=1",
+  "gork_1": "refresh_token=YOUR_REFRESH_TOKEN_2; __ddg1_=...; is_auth=1",
+  "gork_2": "refresh_token=YOUR_REFRESH_TOKEN_3; __ddg1_=...; is_auth=1"
+}

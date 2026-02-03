@@ -9,6 +9,10 @@ yarn.lock
 # Environment variables
 .env
 .cookies
+.cookies.mirrors
+.cookies.mirrors.*
+!.cookies.mirrors.example
+.env.mirrors.*
 # .npmrc - можно добавить в git (только scope mapping, без токена)
 
 # IDE

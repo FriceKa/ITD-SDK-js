@@ -61,26 +61,26 @@ export class SearchManager {
     }
 
     /**
-     * Ищет пользователей
-     * 
+     * Ищет пользователей (GET /api/users/search?q=..., требует авторизации).
+     *
      * @param {string} query - Поисковый запрос
-     * @param {number} limit - Максимальное количество пользователей (по умолчанию 5)
+     * @param {number} limit - Максимальное количество пользователей (по умолчанию 20)
      * @returns {Promise<Array|null>} Массив пользователей или null при ошибке
      */
-    async searchUsers(query, limit = 5) {
-        const result = await this.search(query, limit, 0);
+    async searchUsers(query, limit = 20) {
+        const result = await this.client.users.searchUsers(query, limit);
         return result ? result.users : null;
     }
 
     /**
-     * Ищет хэштеги
-     * 
+     * Ищет хэштеги (GET /api/hashtags?q=...).
+     *
      * @param {string} query - Поисковый запрос
-     * @param {number} limit - Максимальное количество хэштегов (по умолчанию 5)
+     * @param {number} limit - Максимальное количество хэштегов (по умолчанию 20)
      * @returns {Promise<Array|null>} Массив хэштегов или null при ошибке
      */
-    async searchHashtags(query, limit = 5) {
-        const result = await this.search(query, 0, limit);
+    async searchHashtags(query, limit = 20) {
+        const result = await this.client.hashtags.search(query, limit);
         return result ? result.hashtags : null;
     }
 }

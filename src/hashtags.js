@@ -47,6 +47,46 @@ export class HashtagsManager {
     }
 
     /**
+     * Ищет хэштеги по запросу.
+     * GET /api/hashtags?q=...&limit=...
+     *
+     * @param {string} query - Поисковый запрос
+     * @param {number} limit - Максимальное количество хэштегов (по умолчанию 20)
+     * @returns {Promise<Object|null>} { hashtags: [] } или null при ошибке
+     */
+    async search(query, limit = 20) {
+        try {
+            const url = `${this.client.baseUrl}/api/hashtags`;
+            const params = { limit };
+            if (query != null && String(query).trim() !== '') {
+                params.q = String(query).trim();
+            }
+            const response = await this.axios.get(url, { params });
+
+            if (response.status === 200) {
+                const data = response.data;
+                if (data.data && Array.isArray(data.data.hashtags)) {
+                    return { hashtags: data.data.hashtags };
+                }
+                if (Array.isArray(data.hashtags)) {
+                    return { hashtags: data.hashtags };
+                }
+                return { hashtags: [] };
+            } else {
+                console.error(`Ошибка поиска хэштегов: ${response.status}`);
+                return null;
+            }
+        } catch (error) {
+            console.error('Исключение при поиске хэштегов:', error.message);
+            if (error.response) {
+                console.error('Response status:', error.response.status);
+                console.error('Response data:', error.response.data);
+            }
+            return null;
+        }
+    }
+
+    /**
      * Получает посты по хэштегу
      * 
      * @param {string} hashtagName - Имя хэштега (без #)
