@@ -1,6 +1,6 @@
 {
   "name": "itd-sdk-js",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Unofficial SDK for итд.com - Node.js library for working with API. Automatic token refresh, session management, and convenient methods for posts, comments, users, and notifications.",
   "main": "src/client.js",
   "type": "module",

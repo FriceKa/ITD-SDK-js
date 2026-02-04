@@ -110,9 +110,8 @@ export class ITDClient {
                 'Accept': 'application/json, text/plain, */*',
                 'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
                 'Content-Type': 'application/json',
-                // Возможно понадобятся дополнительные заголовки:
-                // 'Referer': this.baseUrl,
-                // 'Origin': this.baseUrl,
+                'Referer': this.baseUrl + '/',
+                'Origin': this.baseUrl,
             }
         };
 
@@ -510,6 +509,26 @@ export class ITDClient {
      */
     async getPost(postId) {
         return await this.posts.getPost(postId);
+    }
+
+    /**
+     * Проверяет, является ли объект поста репостом (итд.com возвращает репосты с полем originalPost).
+     *
+     * @param {Object} post - Объект поста из getPosts / getPost
+     * @returns {boolean}
+     */
+    isRepost(post) {
+        return !!(post && post.originalPost);
+    }
+
+    /**
+     * Возвращает оригинальный пост для репоста, иначе null.
+     *
+     * @param {Object} post - Объект поста из getPosts / getPost
+     * @returns {Object|null} originalPost или null
+     */
+    getOriginalPost(post) {
+        return (post && post.originalPost) ? post.originalPost : null;
     }
 
     /**
